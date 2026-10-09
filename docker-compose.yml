@@ -1,0 +1,145 @@
+# Logstash Explorer — secure-by-default stack. Works with no .env file:
+#   docker compose up -d --build
+# Every secret is generated on first start by `secrets-init` into dedicated volumes.
+name: logstash-explorer
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+services:
+  # One-shot: generates secrets (idempotent), no network at all.
+  secrets-init:
+    build: ./backend
+    image: logstash-explorer/backend:0.1.0
+    command: ["python", "-m", "app.cli", "gen-secrets"]
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    network_mode: none
+    restart: "no"
+    volumes:
+      - secrets-db:/run/lsx-secrets/db
+      - secrets-app:/run/lsx-secrets/app
+      - secrets-runner:/run/lsx-secrets/runner
+
+  db:
+    image: postgres:17-alpine
+    <<: *hardening
+    user: "70:70" # postgres user of the alpine image
+    command:
+      - postgres
+      - -c
+      - password_encryption=scram-sha-256
+      - -c
+      - log_connections=on
+      - -c
+      - log_disconnections=on
+      - -c
+      - listen_addresses=*
+    environment:
+      POSTGRES_DB: logstash_explorer
+      POSTGRES_USER: lsx
+      POSTGRES_PASSWORD_FILE: /run/lsx-secrets/db/db_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --data-checksums"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - secrets-db:/run/lsx-secrets/db:ro
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    shm_size: 128m
+    networks: [db-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lsx -d logstash_explorer"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      secrets-init: { condition: service_completed_successfully }
+
+  # Sandboxed Logstash executor: internal network only (no egress), no access to DB or app secrets.
+  runner:
+    build: ./runner
+    image: logstash-explorer/runner:0.1.0
+    <<: *hardening
+    user: "1000:1000"
+    environment:
+      RUNNER_CONCURRENCY: ${RUNNER_CONCURRENCY:-3} # parallel Logstash runs per runner (scale out: --scale runner=N)
+    volumes:
+      - secrets-runner:/run/lsx-secrets/runner:ro
+    tmpfs:
+      - /tmp:size=1g,mode=1777,exec # the JVM/JRuby extracts native libraries here
+    networks: [runner-net]
+    mem_limit: 3g
+    pids_limit: 1024
+    cpus: 2
+    depends_on:
+      secrets-init: { condition: service_completed_successfully }
+
+  backend:
+    build: ./backend
+    image: logstash-explorer/backend:0.1.0
+    <<: *hardening
+    user: "1000:1000"
+    environment:
+      LSX_ENV: ${LSX_ENV:-production}
+      LSX_PUBLIC_URL: ${LSX_PUBLIC_URL:-http://localhost:${LSX_HTTP_PORT:-8080}}
+      LSX_WEBAUTHN_RP_ID: ${LSX_WEBAUTHN_RP_ID:-localhost}
+      LSX_LOG_LEVEL: ${LSX_LOG_LEVEL:-INFO}
+      LSX_MAX_RUNS_PER_USER: ${LSX_MAX_RUNS_PER_USER:-2}
+      # Optional integrations (disabled when empty) — see README / .env.example
+      LSX_OIDC_ISSUER: ${LSX_OIDC_ISSUER:-}
+      LSX_OIDC_CLIENT_ID: ${LSX_OIDC_CLIENT_ID:-}
+      LSX_LDAP_URL: ${LSX_LDAP_URL:-}
+      LSX_LDAP_BIND_DN: ${LSX_LDAP_BIND_DN:-}
+      LSX_LDAP_USER_BASE: ${LSX_LDAP_USER_BASE:-}
+      LSX_LDAP_USER_FILTER: ${LSX_LDAP_USER_FILTER:-(&(objectClass=person)(sAMAccountName={username}))}
+      LSX_LDAP_GROUP_ATTRIBUTE: ${LSX_LDAP_GROUP_ATTRIBUTE:-memberOf}
+    volumes:
+      - secrets-db:/run/lsx-secrets/db:ro
+      - secrets-app:/run/lsx-secrets/app:ro
+      - secrets-runner:/run/lsx-secrets/runner:ro
+      - backups:/backups
+      - pki:/pki
+    tmpfs:
+      - /tmp
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # reach a local Ollama on the host
+    networks: [front-net, db-net, runner-net, egress-net]
+    depends_on:
+      db: { condition: service_healthy }
+      runner: { condition: service_healthy }
+
+  frontend:
+    build: ./frontend
+    image: logstash-explorer/frontend:0.1.0
+    <<: *hardening
+    user: "101:101"
+    tmpfs:
+      - /tmp
+    ports:
+      - "127.0.0.1:${LSX_HTTP_PORT:-8080}:8080" # loopback only; expose through a TLS reverse proxy (see README §6)
+    networks: [front-net]
+    depends_on:
+      backend: { condition: service_healthy }
+
+networks:
+  front-net: {}
+  db-net: { internal: true }
+  runner-net: { internal: true }
+  egress-net: {}
+
+volumes:
+  pgdata:
+  backups:
+  pki:
+  secrets-db:
+  secrets-app:
+  secrets-runner:

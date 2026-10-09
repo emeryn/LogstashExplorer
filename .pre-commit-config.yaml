@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff
+        args: [--config, backend/pyproject.toml]
+      - id: ruff-format
+        args: [--config, backend/pyproject.toml]
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.9.4
+    hooks:
+      - id: bandit
+        args: [-c, backend/pyproject.toml, -q]
+        additional_dependencies: ["bandit[toml]"]
+        files: ^(backend/app|runner)/.*\.py$
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: pip-audit
+        name: pip-audit (backend dependencies)
+        entry: pip-audit -r backend/requirements.txt --progress-spinner off
+        language: system
+        pass_filenames: false
+        files: ^backend/requirements.*\.txt$
+      - id: npm-audit
+        name: npm audit --audit-level=critical
+        entry: bash -c "cd frontend && npm audit --audit-level=critical"
+        language: system
+        pass_filenames: false
+        files: ^frontend/package(-lock)?\.json$

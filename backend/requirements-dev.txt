@@ -1,0 +1,9 @@
+-r requirements.txt
+# SAST / supply chain / quality gates (all must exit > 0 on findings)
+bandit[toml]==1.9.4
+safety==3.8.1
+pip-audit==2.10.1
+ruff==0.16.10
+pytest==9.1.1
+pytest-asyncio==1.4.0
+pre-commit==4.6.2

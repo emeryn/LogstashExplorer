@@ -1,0 +1,77 @@
+# Default deny, then only the flows of the architecture diagram.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-dns }
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to: [{ namespaceSelector: {}, podSelector: { matchLabels: { k8s-app: kube-dns } } }]
+      ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: frontend }
+spec:
+  podSelector: { matchLabels: { app: frontend } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } } }]
+      ports: [{ port: 8080 }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: backend } } }]
+      ports: [{ port: 8000 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: backend }
+spec:
+  podSelector: { matchLabels: { app: backend } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: frontend } } }]
+      ports: [{ port: 8000 }]
+  egress:
+    - to: [{ podSelector: { matchLabels: { app: db } } }]
+      ports: [{ port: 5432 }]
+    - to: [{ podSelector: { matchLabels: { app: runner } } }]
+      ports: [{ port: 8700 }]
+    # LLM endpoints, IdP (OIDC), LDAPS, Vault, remote syslog: restrict to your CIDRs in production.
+    - to: [{ ipBlock: { cidr: 0.0.0.0/0, except: [169.254.169.254/32] } }]
+      ports:
+        - { port: 443 }
+        - { port: 636 }
+        - { port: 11434 }
+        - { port: 8200 }
+        - { port: 514, protocol: TCP }
+        - { port: 514, protocol: UDP }
+        - { port: 6514 }  # syslog over TLS
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: runner }
+spec:
+  podSelector: { matchLabels: { app: runner } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: backend } } }]
+      ports: [{ port: 8700 }]
+  egress: [] # sandbox: no egress at all
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: db }
+spec:
+  podSelector: { matchLabels: { app: db } }
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app: backend } } }]
+      ports: [{ port: 5432 }]
+  egress: []

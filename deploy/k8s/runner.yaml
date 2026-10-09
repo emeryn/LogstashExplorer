@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Service
+metadata: { name: runner, labels: { app: runner } }
+spec:
+  selector: { app: runner }
+  ports: [{ port: 8700, targetPort: 8700 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: runner }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: runner } }
+  template:
+    metadata: { labels: { app: runner } }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: runner
+          image: logstash-explorer/runner
+          env: [{ name: RUNNER_CONCURRENCY, value: "2" }]
+          ports: [{ containerPort: 8700 }]
+          readinessProbe:
+            httpGet: { path: /health, port: 8700 }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 500m, memory: 1Gi }
+            limits: { cpu: "2", memory: 2Gi }
+          volumeMounts:
+            - { name: tmp, mountPath: /tmp }
+            - { name: secret-runner, mountPath: /run/lsx-secrets/runner, readOnly: true }
+      volumes:
+        - name: tmp
+          emptyDir: { medium: Memory, sizeLimit: 1Gi }
+        - name: secret-runner
+          secret: { secretName: lsx-runner, defaultMode: 0440 }
