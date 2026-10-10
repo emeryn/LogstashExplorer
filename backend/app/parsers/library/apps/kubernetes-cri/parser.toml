@@ -1,0 +1,13 @@
+name = "Kubernetes container logs (CRI format)"
+vendor = "Kubernetes (containerd, CRI-O)"
+description = """
+Container logs written by containerd / CRI-O under `/var/log/containers/` (`<RFC3339Nano> <stream> <F|P> <line>`).
+The pod, namespace, container name and container ID come from the file name — declare it as an input field
+(`[log][file][path]`). Partial lines (`P`) are tagged `partial` (reassemble them upstream).
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+(?:Z|[+-]\d{2}:\d{2}) (?:stdout|stderr) [FP] ']
+fields = ["message", "log.iostream", "kubernetes.pod.name", "kubernetes.namespace", "kubernetes.container.name", "container.id", "event.dataset"]
+
+[input_fields]  # set by the input in production (e.g. the file path); used by the sample
+"[log][file][path]" = "/var/log/containers/billing-api-7d9f8b6c5d-x2k4p_prod_api-3f4e5d6c7b8a99887766554433221100ffeeddccbbaa99887766554433221100.log"

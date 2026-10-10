@@ -1,0 +1,9 @@
+name = "BIND DNS query log"
+vendor = "ISC BIND 9"
+description = """
+BIND 9 `querylog` entries (file channel with `print-time`, or syslog `named[pid]:`): client address and port,
+query name, class, type, flags and the server address that received it.
+"""
+input_format = "lines"
+detect = ['client (?:@0x[0-9a-f]+ )?[\d.:a-fA-F]+#\d+ \([^)]+\): (?:view \S+: )?query: ']
+fields = ["source.ip", "source.port", "dns.question.name", "dns.question.class", "dns.question.type", "bind.flags", "server.ip", "event.dataset"]

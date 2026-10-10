@@ -1,0 +1,5 @@
+Oct  7 10:15:30 dhcp01 dhcpd[1234]: DHCPDISCOVER from 00:11:22:33:44:55 (wks-042) via eth0
+Oct  7 10:15:30 dhcp01 dhcpd[1234]: DHCPOFFER on 10.0.0.42 to 00:11:22:33:44:55 (wks-042) via eth0
+Oct  7 10:15:31 dhcp01 dhcpd[1234]: DHCPREQUEST for 10.0.0.42 (10.0.0.1) from 00:11:22:33:44:55 (wks-042) via eth0
+Oct  7 10:15:31 dhcp01 dhcpd[1234]: DHCPACK on 10.0.0.42 to 00:11:22:33:44:55 (wks-042) via eth0
+Oct  7 18:02:00 dhcp01 dhcpd[1234]: DHCPRELEASE of 10.0.0.42 from 00:11:22:33:44:55 (wks-042) via eth0 (found)

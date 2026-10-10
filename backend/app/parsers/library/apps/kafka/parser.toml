@@ -1,0 +1,9 @@
+name = "Apache Kafka server log"
+vendor = "Apache Kafka, Confluent Platform"
+description = """
+Kafka broker / controller logs in the default log4j layout (`[2026-10-07 10:15:32,123] INFO [Component] message
+(logger)`): level, component, logger and message.
+"""
+input_format = "lines"
+detect = ['^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3}\] (?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL) .*\([\w.$]+\)$']
+fields = ["log.level", "kafka.log.component", "log.logger", "message", "event.dataset"]

@@ -1,0 +1,10 @@
+name = "AWS Application Load Balancer access log"
+vendor = "Amazon Web Services"
+description = """
+Application Load Balancer access logs (space-separated, quoted fields): client and target, processing times,
+ELB and target status codes, bytes, request line, user agent, TLS cipher and protocol, target group, trace ID,
+host (SNI), matched rule, actions and error reason.
+"""
+input_format = "lines"
+detect = ['^(?:https?|h2|grpcs?|wss?) \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z app/\S+ [\d.:a-fA-F]+:\d+ ']
+fields = ["aws.elb.type", "aws.elb.name", "source.ip", "source.port", "aws.elb.target.ip", "http.response.status_code", "aws.elb.backend.http.response.status_code", "http.request.method", "url.original", "user_agent.original", "tls.cipher", "url.domain", "aws.elb.trace_id", "aws.elb.request_processing_time.sec"]

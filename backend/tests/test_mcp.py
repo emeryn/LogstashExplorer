@@ -162,7 +162,7 @@ def test_tool_calls_are_audited(monkeypatch):
 def test_parser_tools_are_available_to_read_only_tokens():
     client = _client(scope="read")
     names = {t["name"] for t in _rpc(client, "tools/list").json()["result"]["tools"]}
-    assert {"list_parsers", "get_parser", "detect_format", "apply_parser"} <= names
+    assert {"list_parsers", "get_parser", "detect_format", "apply_parser", "convert_auditd"} <= names
     sample = '%ASA-4-106023: Deny tcp src o:1.2.3.4/5 dst i:10.0.0.1/22 by access-group "X"'
     res = _rpc(client, "tools/call", {"name": "detect_format", "arguments": {"sample": sample}}).json()["result"]
     assert res["structuredContent"]["matches"][0]["id"] == "cisco-asa"

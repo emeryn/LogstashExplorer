@@ -1,0 +1,9 @@
+name = "Unix su log (sulog)"
+vendor = "Solaris, AIX, HP-UX (/var/adm/sulog)"
+description = """
+`/var/adm/sulog` written by `su` on Solaris, AIX and HP-UX (`SU 10/07 10:15 + pts/1 alice-root`): result (`+`
+success, `-` failure), terminal, user and target account. The year is not logged: it is inferred.
+"""
+input_format = "lines"
+detect = ['^SU \d{2}/\d{2} \d{2}:\d{2} [+-] \S+ [^\s-]+-\S+$']
+fields = ["user.name", "user.target.name", "event.outcome", "event.action", "sulog.tty"]

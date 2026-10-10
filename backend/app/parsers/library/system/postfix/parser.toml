@@ -1,0 +1,9 @@
+name = "Postfix mail log"
+vendor = "Postfix"
+description = """
+Postfix lines from `/var/log/mail.log` / `maillog`: SMTP client connections, SASL logins and failures, queue IDs,
+sender and size, recipient delivery (relay, delay, DSN, status) and RCPT rejections.
+"""
+input_format = "lines"
+detect = ['^(?:<\d+>)?\w{3} [ \d]\d \d{2}:\d{2}:\d{2} \S+ postfix(?:-\w+)?/[\w/-]+\[\d+\]: ']
+fields = ["process.name", "postfix.queue_id", "source.ip", "source.domain", "email.from.address", "email.to.address", "postfix.status", "postfix.relay", "postfix.dsn", "user.name", "event.outcome"]

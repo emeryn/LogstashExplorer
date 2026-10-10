@@ -1,0 +1,9 @@
+name = "Sophos Firewall (XG / SFOS)"
+vendor = "Sophos"
+description = """
+Sophos Firewall (SFOS / XG) syslog in key=value format: firewall, IPS, web filter, ATP and authentication logs
+with device, log ID / type / subtype, rule, user, interfaces, addresses, ports, NAT, zones and byte counters.
+"""
+input_format = "lines"
+detect = ['device="SFW" date=\d{4}-\d{2}-\d{2} time=\d{2}:\d{2}:\d{2} ', 'device_name="[^"]+" device_id=\S+ log_id=\d+ log_type=']
+fields = ["observer.name", "event.code", "sophos.xg.log_type", "event.action", "rule.id", "user.name", "source.ip", "source.port", "destination.ip", "destination.port", "network.transport", "source.nat.ip", "observer.ingress.zone", "source.bytes", "event.type"]

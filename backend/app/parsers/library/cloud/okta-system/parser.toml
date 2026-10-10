@@ -1,0 +1,9 @@
+name = "Okta System Log"
+vendor = "Okta"
+description = """
+Okta System Log events (API or log streaming): event type, actor, client IP and user agent, geolocation,
+outcome, severity and targets. The event is kept under `okta`.
+"""
+input_format = "json"
+detect = ['"eventType"\s*:\s*"[a-z_]+\.[a-z_.]+".*"actor"\s*:', '"legacyEventType"\s*:']
+fields = ["event.action", "message", "user.name", "user.full_name", "source.ip", "user_agent.original", "source.geo.city_name", "source.geo.country_name", "event.outcome", "log.level", "okta.outcome"]

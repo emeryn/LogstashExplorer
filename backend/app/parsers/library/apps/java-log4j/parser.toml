@@ -1,0 +1,10 @@
+name = "Java application log (log4j / logback pattern)"
+vendor = "Log4j 2, Logback, Tomcat apps"
+description = """
+Java application logs with the common `%d %-5level [%thread] %logger - %msg` layout (log4j 2 / logback defaults
+used by most frameworks): timestamp, level, thread, logger and message. Stack trace lines must be joined upstream
+(multiline codec of the input).
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}[,.]\d{3} +(?:TRACE|DEBUG|INFO|WARN|ERROR|FATAL) +\[[^\]]+\] +[\w.$]+(?::\d+)? +- ']
+fields = ["log.level", "process.thread.name", "log.logger", "message", "event.dataset"]

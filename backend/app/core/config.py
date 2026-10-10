@@ -77,6 +77,9 @@ class Settings(BaseSettings):
     # Workspace limits
     max_upload_mb: int = 20
     max_evtx_records: int = 5000
+    # auditd pre-processing with LAUREL (installed in the backend image).
+    laurel_bin: str = "/usr/local/bin/laurel"
+    max_laurel_events: int = 5000
     agent_max_iterations: int = 6
 
     @property

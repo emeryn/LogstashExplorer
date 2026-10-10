@@ -72,6 +72,7 @@ class _Req:
     [
         ("GET", "/api/pipelines", True),
         ("POST", "/api/pipeline/run", True),
+        ("POST", "/api/pipeline/laurel", True),
         ("POST", "/api/mcp", True),
         ("POST", "/api/pipelines", False),
         ("PUT", "/api/pipelines/1", False),

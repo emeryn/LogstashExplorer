@@ -1,0 +1,11 @@
+name = "PostgreSQL server log"
+vendor = "PostgreSQL"
+description = """
+PostgreSQL logs with the default `log_line_prefix = '%m [%p] '` (optionally followed by `%q%u@%d `): timestamp and
+zone, PID, user and database, severity and message. Connection authorizations and authentication failures fill
+`user.name` and `postgresql.log.database`. The time zone abbreviation is kept in `postgresql.log.timezone` (set
+the date filter `timezone` to match the server).
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)? (?:[A-Z]{2,5}|[+-]\d{2}) \[\d+\] (?:\S+@\S+ )?(?:LOG|ERROR|FATAL|PANIC|WARNING|NOTICE|INFO|DEBUG\d?|STATEMENT|DETAIL|HINT):']
+fields = ["process.pid", "log.level", "user.name", "postgresql.log.database", "message", "event.outcome"]

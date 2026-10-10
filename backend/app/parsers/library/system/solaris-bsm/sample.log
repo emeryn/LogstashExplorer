@@ -1,0 +1,3 @@
+header,129,2,login - ssh,,sol10-db,2026-10-07 10:15:32.123 +02:00,subject,alice,alice,staff,alice,staff,1234,1234,0 0 10.0.0.5,return,success,0
+header,129,2,login - ssh,,sol10-db,2026-10-07 10:15:40.551 +02:00,subject,root,root,root,root,root,1240,1240,0 0 198.51.100.7,return,failure: Authentication failed,-1
+header,195,2,execve(2),,sol10-db,2026-10-07 10:16:30.000 +02:00,path,/usr/bin/cat,attribute,100555,root,bin,65538,2049,0,exec_args,2,cat,/etc/shadow,subject,alice,root,staff,alice,staff,2345,1234,0 0 10.0.0.5,return,success,0

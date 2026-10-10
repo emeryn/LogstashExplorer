@@ -1,0 +1,6 @@
+Microsoft DHCP Service Activity Log
+ID,Date,Time,Description,IP Address,Host Name,MAC Address,User Name, TransactionID, QResult,Probationtime, CorrelationID,Dhcid,VendorClass(Hex),VendorClass(ASCII),UserClass(Hex),UserClass(ASCII),RelayAgentInformation,DnsRegError.
+10,10/07/26,10:15:32,Assign,10.0.0.42,WKS-042.corp.local,001122334455,,3451234567,0,,,,0x4D53465420352E30,MSFT 5.0,,,,0
+11,10/07/26,12:15:32,Renew,10.0.0.42,WKS-042.corp.local,001122334455,,3451234568,0,,,,0x4D53465420352E30,MSFT 5.0,,,,0
+13,10/07/26,12:20:00,Conflict,10.0.0.43,BAD_ADDRESS,4d3ba6c0,,0,6,,,,,,,,,0
+32,10/07/26,12:20:01,DNS Update Successful,10.0.0.42,WKS-042.corp.local,,,0,6,,,,,,,,,0

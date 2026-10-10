@@ -1,0 +1,10 @@
+name = "Suricata EVE JSON"
+vendor = "Suricata (OISF)"
+description = """
+Suricata `eve.json` events (alert, dns, http, tls, flow…): addresses and ports, protocol, community ID, alert
+signature / category / severity / action, and DNS, HTTP and TLS details mapped to ECS. Raw objects are kept under
+`suricata.eve`.
+"""
+input_format = "json"
+detect = ['"event_type"\s*:\s*"(?:alert|dns|http|tls|flow|fileinfo|anomaly|ssh|smb|netflow)".*"src_ip"\s*:']
+fields = ["source.ip", "source.port", "destination.ip", "destination.port", "network.transport", "network.community_id", "event.kind", "rule.id", "rule.name", "rule.category", "event.severity", "dns.question.name", "http.request.method", "url.domain", "tls.client.server_name"]

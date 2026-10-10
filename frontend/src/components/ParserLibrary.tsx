@@ -12,9 +12,11 @@ type OnUse = (parser: Parser, withSample: boolean) => void;
 
 const CATEGORY_ICON: Record<ParserCategory, IconName> = {
   windows: "monitor",
+  cloud: "cloud",
   web: "network",
   network: "shield",
   system: "terminal",
+  apps: "database",
   industrial: "settings",
 };
 
@@ -73,16 +75,16 @@ function Browser({ onUse, suggested = [] }: { onUse: OnUse; suggested?: ParserSu
         <nav className="library-cats">
           {suggested.length > 0 && (
             <button className={category === "suggested" ? "active" : ""} onClick={() => setCategory("suggested")}>
-              <Icon name="wand" /> Matches your sample <span className="badge accent">{suggested.length}</span>
+              <Icon name="wand" /> <span className="cat-label">Matches your sample</span> <span className="badge accent">{suggested.length}</span>
             </button>
           )}
           <button className={category === "all" ? "active" : ""} onClick={() => setCategory("all")}>
-            <Icon name="list" /> All parsers <span className="badge">{catalog.parsers.length}</span>
+            <Icon name="list" /> <span className="cat-label">All parsers</span> <span className="badge">{catalog.parsers.length}</span>
           </button>
           {catalog.categories.map((c) => (
             <button key={c.id} className={category === c.id ? "active" : ""} onClick={() => setCategory(c.id)}>
               <Icon name={CATEGORY_ICON[c.id]} />
-              {c.label} <span className="badge">{count(c.id)}</span>
+              <span className="cat-label">{c.label}</span> <span className="badge">{count(c.id)}</span>
             </button>
           ))}
         </nav>
@@ -140,6 +142,23 @@ function Browser({ onUse, suggested = [] }: { onUse: OnUse; suggested?: ParserSu
                 </div>
                 <pre>{selected.filter}</pre>
               </div>
+              {Object.keys(selected.input_fields).length > 0 && (
+                <div>
+                  <h3>Input fields used by this parser</h3>
+                  <table className="table dense">
+                    <tbody>
+                      {Object.entries(selected.input_fields).map(([k, v]) => (
+                        <tr key={k}>
+                          <td>
+                            <code>{k}</code>
+                          </td>
+                          <td className="mono small">{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
               <div>
                 <h3>Sample ({selected.sample.split("\n").length} lines, synthetic)</h3>
                 <pre>{selected.sample}</pre>
@@ -171,7 +190,7 @@ export default function Library({ onUse }: { onUse: OnUse }) {
     <div className="page" style={{ maxWidth: "none", height: "100%", display: "flex", flexDirection: "column" }}>
       <PageHeader
         title="Parser library"
-        subtitle="Ready-made Logstash filters for the formats most seen in companies — Windows EVTX, web servers, firewalls, Linux, CEF/LEEF and industrial protocols."
+        subtitle="Ready-made Logstash filters for the formats most seen in companies — Windows, cloud & SaaS, web servers, firewalls and IDS, Linux and legacy Unix, databases and industrial protocols."
       />
       <div className="card" style={{ padding: 0, flex: 1, display: "flex", flexDirection: "column", minHeight: 520, overflow: "hidden" }}>
         <Browser onUse={onUse} />

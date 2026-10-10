@@ -1,0 +1,9 @@
+name = "SonicWall firewall (SonicOS)"
+vendor = "SonicWall"
+description = """
+SonicOS syslog (`id=firewall sn=… time="…" fw=… pri=… m=… msg="…" src=ip:port:iface dst=ip:port:iface proto=…`):
+message ID and text, addresses with port and interface, protocol / service, firewall action and byte counters.
+"""
+input_format = "lines"
+detect = ['id=firewall sn=[0-9A-F]+ time="\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}']
+fields = ["observer.serial_number", "event.code", "message", "source.ip", "source.port", "observer.ingress.interface.name", "destination.ip", "destination.port", "network.transport", "event.action", "sonicwall.priority"]

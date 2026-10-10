@@ -1,0 +1,2 @@
+[2026-10-07T08:15:32.123Z] "GET /api/orders HTTP/1.1" 200 - 0 1532 12 10 "203.0.113.42" "curl/8.5.0" "6f1a2b3c-0000-4000-8000-000000000001" "api.example.org" "10.0.1.21:8080"
+[2026-10-07T08:15:40.551Z] "POST /api/payments HTTP/2" 503 UF 312 91 1002 - "198.51.100.20,10.0.0.1" "billing-worker/2.1" "6f1a2b3c-0000-4000-8000-000000000002" "payments.internal" "10.0.1.30:8443" outbound|8443||payments.prod.svc.cluster.local

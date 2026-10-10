@@ -1,0 +1,4 @@
+Tue Oct  7 10:15:30 2026 [pid 1230] CONNECT: Client "10.0.0.5"
+Tue Oct  7 10:15:32 2026 [pid 1234] [alice] OK LOGIN: Client "10.0.0.5"
+Tue Oct  7 10:15:40 2026 [pid 1240] [root] FAIL LOGIN: Client "198.51.100.7"
+Tue Oct  7 10:16:02 2026 [pid 1235] [alice] OK UPLOAD: Client "10.0.0.5", "/home/alice/report.pdf", 104857 bytes, 512.00Kbyte/sec

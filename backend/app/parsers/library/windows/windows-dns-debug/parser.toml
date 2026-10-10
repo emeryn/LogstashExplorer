@@ -1,0 +1,11 @@
+name = "Windows DNS Server debug log"
+vendor = "Microsoft"
+description = """
+Windows DNS Server debug logging (packet log, `dns.log`): direction, client address, transaction ID, query /
+response, opcode, flags, response code, query type and name (decoded from the `(3)www(7)example(3)org(0)` form).
+Header lines are dropped. The timestamp follows the server locale (US format expected here).
+"""
+input_format = "lines"
+detect = ['^\d{1,2}/\d{1,2}/\d{4} \d{1,2}:\d{2}:\d{2}(?: [AP]M)? [0-9A-F]+ PACKET +[0-9A-F]+ (?:UDP|TCP) (?:Rcv|Snd) ']
+fields = ["windows.dns.direction", "client.ip", "dns.id", "dns.op_code", "dns.response_code", "dns.question.type", "dns.question.name", "network.transport", "dns.type"]
+expected_events = 3

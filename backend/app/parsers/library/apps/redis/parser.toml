@@ -1,0 +1,9 @@
+name = "Redis server log"
+vendor = "Redis, Valkey"
+description = """
+Redis / Valkey server log (`1234:M 07 Oct 2026 10:15:32.123 * Ready to accept connections`): PID, role (master,
+replica, child, sentinel), level (`.` debug, `-` verbose, `*` notice, `#` warning) and message.
+"""
+input_format = "lines"
+detect = ['^\d+:[XCSM] \d{2} \w{3} \d{4} \d{2}:\d{2}:\d{2}\.\d{3} [.\-*#] ']
+fields = ["process.pid", "redis.log.role", "log.level", "message", "event.dataset"]

@@ -1,0 +1,9 @@
+name = "Cisco Meraki MX syslog"
+vendor = "Cisco Meraki"
+description = """
+Meraki MX syslog (`<pri>1 <epoch> <device> <type> …`): flows (allow / deny, addresses, ports, protocol), URLs
+(request, user agent) and events / security events kept as key-value pairs under `meraki`.
+"""
+input_format = "lines"
+detect = ['^(?:<\d+>)?1 \d{10}\.\d+ \S+ (?:flows|urls|events|ids-alerts|security_event|firewall|vpn_firewall|airmarshal_events) ']
+fields = ["observer.name", "meraki.type", "source.ip", "destination.ip", "destination.port", "network.transport", "event.action", "url.original", "user_agent.original"]

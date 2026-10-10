@@ -1,0 +1,3 @@
+2026-10-07T10:15:32.123+02:00  INFO 4321 --- [billing] [           main] c.c.billing.BillingApplication           : Started BillingApplication in 3.214 seconds (process running for 3.8)
+2026-10-07T10:15:40.551+02:00 ERROR 4321 --- [billing] [nio-8080-exec-3] o.a.c.c.C.[.[.[/].[dispatcherServlet]    : Servlet.service() threw exception [Request processing failed]
+2026-10-07 10:15:41.002  WARN 1234 --- [  scheduling-1] c.c.legacy.jobs.ReconcileJob             : 3 invoices could not be matched

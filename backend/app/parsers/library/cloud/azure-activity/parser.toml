@@ -1,0 +1,10 @@
+name = "Azure Activity Log"
+vendor = "Microsoft Azure"
+description = """
+Azure Activity Log records exported by a diagnostic setting (Event Hub or storage account): administrative
+operations on resources, with caller, IP address, result and subscription / resource group extracted from the
+resource ID. The record is kept under `azure.activitylogs`.
+"""
+input_format = "json"
+detect = ['"operationName"\s*:\s*"MICROSOFT\.[A-Z]+/', '"category"\s*:\s*"(?:Administrative|Policy|Security|ServiceHealth)"']
+fields = ["event.action", "event.outcome", "source.ip", "user.full_name", "cloud.account.id", "azure.resource.group", "azure.activitylogs.category", "azure.resource.id"]

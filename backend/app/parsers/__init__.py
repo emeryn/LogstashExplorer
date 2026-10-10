@@ -5,6 +5,9 @@ Each parser is a directory `library/<category>/<id>/` holding:
 - `filter.conf`  — the Logstash `filter { … }` section (only plugins allowed by the runner sandbox);
 - `sample.log` (line input) or `sample.jsonl` (JSON lines input) — synthetic, representative events.
 
+`parser.toml` may also declare `[input_fields]`: what the input sets in production (e.g. the file path the
+filter extracts a pod or host name from). They are injected with the sample (checks, "Use filter + sample").
+
 `scripts/check-parsers.py` runs every parser on its sample in a real Logstash and checks that the declared
 fields are produced without failure tags, in both ECS compatibility modes.
 """
@@ -18,9 +21,11 @@ from pathlib import Path
 LIBRARY = Path(__file__).parent / "library"
 CATEGORIES = {
     "windows": "Windows",
+    "cloud": "Cloud & SaaS",
     "web": "Web & proxy",
     "network": "Network & security",
     "system": "Systems & generic",
+    "apps": "Apps & databases",
     "industrial": "Industrial (OT/ICS)",
 }
 DETECT_LINES = 200
@@ -40,6 +45,7 @@ class Parser:
     sample: str
     notes: str = ""
     priority: int = 0  # breaks score ties in detection (specific parsers > generic ones)
+    input_fields: tuple[tuple[str, str], ...] = ()
 
     def summary(self) -> dict:
         return {
@@ -54,7 +60,13 @@ class Parser:
         }
 
     def full(self) -> dict:
-        return {**self.summary(), "filter": self.filter, "sample": self.sample, "notes": self.notes}
+        return {
+            **self.summary(),
+            "filter": self.filter,
+            "sample": self.sample,
+            "notes": self.notes,
+            "input_fields": dict(self.input_fields),
+        }
 
 
 def _load(directory: Path) -> Parser:
@@ -77,6 +89,7 @@ def _load(directory: Path) -> Parser:
         sample=sample_file.read_text(encoding="utf-8").strip("\n"),
         notes=meta.get("notes", "").strip(),
         priority=int(meta.get("priority", 0)),
+        input_fields=tuple((str(k), str(v)) for k, v in meta.get("input_fields", {}).items()),
     )
 
 

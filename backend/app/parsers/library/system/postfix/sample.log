@@ -1,0 +1,6 @@
+Oct  7 10:15:32 mx01 postfix/smtpd[1234]: connect from mail.partner.example[203.0.113.5]
+Oct  7 10:15:33 mx01 postfix/smtpd[1234]: 4F2A11C0E3: client=mail.partner.example[203.0.113.5], sasl_method=PLAIN, sasl_username=partner-relay
+Oct  7 10:15:33 mx01 postfix/qmgr[987]: 4F2A11C0E3: from=<invoice@partner.example>, size=48213, nrcpt=1 (queue active)
+Oct  7 10:15:34 mx01 postfix/smtp[1301]: 4F2A11C0E3: to=<alice@corp.example>, relay=mail.corp.example[10.0.0.25]:25, delay=1.2, delays=0.1/0/0.4/0.7, dsn=2.0.0, status=sent (250 2.0.0 Ok: queued as 9B7C2D1E0F)
+Oct  7 10:16:00 mx01 postfix/smtpd[1240]: NOQUEUE: reject: RCPT from unknown[198.51.100.7]: 554 5.7.1 <bob@corp.example>: Relay access denied; from=<spam@bad.example> to=<bob@corp.example> proto=ESMTP helo=<x>
+Oct  7 10:16:30 mx01 postfix/smtpd[1250]: warning: unknown[198.51.100.9]: SASL LOGIN authentication failed: authentication failure

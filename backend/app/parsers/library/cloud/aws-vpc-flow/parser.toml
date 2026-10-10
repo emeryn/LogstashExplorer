@@ -1,0 +1,9 @@
+name = "AWS VPC Flow Logs (default format)"
+vendor = "Amazon Web Services"
+description = """
+VPC Flow Logs in the default version 2 format (`version account-id interface-id srcaddr dstaddr srcport dstport
+protocol packets bytes start end action log-status`). NODATA / SKIPDATA records are kept with their status.
+"""
+input_format = "lines"
+detect = ['^2 \d{12} eni-[0-9a-f]+ \S+ \S+ \S+ \S+ \S+ \S+ \S+ \d{10} \d{10} (?:ACCEPT|REJECT|-) (?:OK|NODATA|SKIPDATA)$']
+fields = ["cloud.account.id", "aws.vpcflow.interface_id", "source.ip", "source.port", "destination.ip", "destination.port", "network.transport", "network.packets", "network.bytes", "event.action", "event.type", "aws.vpcflow.log_status"]

@@ -1,0 +1,12 @@
+name = "Windows events via Snare (incl. Windows 2000 / XP / 2003)"
+vendor = "Snare Agent (Windows 2000 → 2025)"
+description = """
+Windows events forwarded by the Snare agent (`MSWinEventLog` tab-separated syslog), the usual way legacy Windows
+2000 / XP / Server 2003 hosts are collected (their binary `.evt` files are not EVTX). Maps channel, event ID —
+including the legacy Security IDs 528 / 529 / 540 / 592 / 624 / 644 / 672… — source, user, type (success /
+failure audit), computer and category, and extracts source address, logon type, target account and process from
+the description.
+"""
+input_format = "lines"
+detect = ['MSWinEventLog\t\d+\t']
+fields = ["winlog.channel", "event.code", "event.action", "event.outcome", "winlog.provider_name", "user.name", "host.name", "winlog.task", "source.ip", "winlog.logon.type", "user.target.name", "process.executable", "message"]

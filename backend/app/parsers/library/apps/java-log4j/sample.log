@@ -1,0 +1,3 @@
+2026-10-07 10:15:32,123 INFO  [main] com.corp.billing.BillingApplication - Started BillingApplication in 4.2 seconds
+2026-10-07 10:15:40,551 ERROR [http-nio-8080-exec-3] com.corp.billing.payment.GatewayClient - Payment gateway timeout after 30000 ms (order 18274)
+2026-10-07 10:15:41.002 WARN  [scheduler-1] com.corp.billing.jobs.ReconcileJob:88 - 3 invoices could not be matched

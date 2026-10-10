@@ -1,0 +1,3 @@
+2026-10-07T08:15:32.123456789Z stdout F {"level":"info","msg":"order created","order_id":18273}
+2026-10-07T08:15:33.000000001Z stderr F panic: runtime error: invalid memory address or nil pointer dereference
+2026-10-07T08:15:33.000000500Z stderr P goroutine 1 [running]: main.handle(0xc000123456, 0x1)

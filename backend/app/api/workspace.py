@@ -1,4 +1,4 @@
-"""Workspace: run pipelines, convert EVTX, autonomous agent (streamed NDJSON)."""
+"""Workspace: run pipelines, convert EVTX, pre-process auditd with LAUREL, autonomous agent (streamed NDJSON)."""
 
 import json
 import logging
@@ -16,6 +16,7 @@ from app.core.deps import Principal, require_role
 from app.core.input_fields import InputFields
 from app.db.models import Role
 from app.db.session import get_db, sessionmaker
+from app.services import laurel
 from app.services.agent import run_agent
 from app.services.audit import audit
 from app.services.concurrency import RunSlot, user_run_slot
@@ -88,6 +89,39 @@ async def pipeline_evtx(
     return {"input": text, "input_format": "json", "records": count, "truncated": truncated}
 
 
+class LaurelIn(BaseModel):
+    input: str = Field(min_length=1, max_length=MAX_INPUT)
+
+
+@router.post("/pipeline/laurel")
+async def pipeline_laurel(
+    body: LaurelIn, request: Request, principal: Principal = Depends(any_user), db: AsyncSession = Depends(get_db)
+) -> dict:
+    """Group raw auditd records into one LAUREL JSON object per event (read as lines by the library parser)."""
+    if not laurel.available():
+        raise HTTPException(503, "LAUREL is not installed on this server")
+    if not laurel.looks_like_raw_auditd(body.input):
+        raise HTTPException(422, "No raw auditd record found (type=… msg=audit(…): …)")
+    async with user_run_slot(principal.user.id):
+        try:
+            text, count, truncated, errors = await run_in_threadpool(
+                laurel.to_json_lines, body.input, get_settings().max_laurel_events
+            )
+        except laurel.LaurelError as exc:
+            raise HTTPException(422, str(exc)) from exc
+    if not count:
+        raise HTTPException(422, f"LAUREL produced no event ({errors} unparsed lines)")
+    await audit(
+        db,
+        "data.laurel_convert",
+        request=request,
+        actor=principal.user,
+        details={"events": count, "truncated": truncated, "unparsed_lines": errors},
+    )
+    await db.commit()
+    return {"input": text, "input_format": "lines", "events": count, "truncated": truncated, "unparsed_lines": errors}
+
+
 # ---- Autonomous agent ------------------------------------------------------------------------
 class AgentIn(BaseModel):
     input: str = Field(min_length=1, max_length=MAX_INPUT)
@@ -102,7 +136,7 @@ class AgentIn(BaseModel):
 @router.get("/workspace/settings")
 async def workspace_settings(_: Principal = Depends(any_user), db: AsyncSession = Depends(get_db)) -> dict:
     """What the editor needs to mimic the pipeline: ECS mode decides e.g. path vs [log][file][path]."""
-    return {"ecs_compatibility": (await get_setting(db, "ai"))["ecs_compatibility"]}
+    return {"ecs_compatibility": (await get_setting(db, "ai"))["ecs_compatibility"], "laurel": laurel.available()}
 
 
 @router.post("/agent/run")

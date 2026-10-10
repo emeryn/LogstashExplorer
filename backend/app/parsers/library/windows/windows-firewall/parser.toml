@@ -1,0 +1,10 @@
+name = "Windows Defender Firewall log (pfirewall.log)"
+vendor = "Microsoft"
+description = """
+Windows Defender Firewall packet log (`pfirewall.log`): action (ALLOW / DROP), protocol, addresses, ports, size,
+TCP flags, direction (SEND / RECEIVE) and process ID on recent Windows versions. `#` header lines are dropped.
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} (?:ALLOW|DROP|INFO-EVENTS-LOST) (?:TCP|UDP|ICMP|ICMPv6|\d+|-) ']
+fields = ["event.action", "event.type", "network.transport", "source.ip", "destination.ip", "source.port", "destination.port", "network.direction", "windows.firewall.tcp_flags", "process.pid"]
+expected_events = 3

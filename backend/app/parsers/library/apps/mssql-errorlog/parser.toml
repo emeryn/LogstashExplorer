@@ -1,0 +1,10 @@
+name = "Microsoft SQL Server error log"
+vendor = "Microsoft SQL Server"
+description = """
+SQL Server `ERRORLOG` lines (`2026-10-07 10:15:32.12 Logon       Login failed for user 'sa'. … [CLIENT: …]`):
+source (spid, Logon, Server…), message, error number / severity / state, and failed or successful logins with
+user and client address.
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{2} (?:spid\d+s?|Logon|Server|Backup|\w+) {2,}']
+fields = ["mssql.log.origin", "message", "user.name", "source.ip", "event.outcome", "error.code", "mssql.log.severity"]

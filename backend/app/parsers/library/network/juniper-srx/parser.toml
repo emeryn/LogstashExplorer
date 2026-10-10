@@ -1,0 +1,9 @@
+name = "Juniper SRX (RT_FLOW, structured syslog)"
+vendor = "Juniper Networks"
+description = """
+Juniper SRX session logs in structured-data mode (`set system syslog … structured-data`): RT_FLOW_SESSION_CREATE /
+CLOSE / DENY with addresses, ports, NAT, zones, policy, application, user, close reason and byte counters.
+"""
+input_format = "lines"
+detect = ['RT_FLOW - RT_FLOW_SESSION_(?:CREATE|CLOSE|DENY) \[junos@']
+fields = ["observer.hostname", "event.action", "source.ip", "source.port", "destination.ip", "destination.port", "source.nat.ip", "rule.name", "observer.ingress.zone", "observer.egress.zone", "network.application", "event.type", "juniper.srx.reason", "source.bytes"]

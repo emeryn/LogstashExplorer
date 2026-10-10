@@ -1,0 +1,4 @@
+1:C 07 Oct 2026 10:15:30.001 * oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:M 07 Oct 2026 10:15:32.123 * Ready to accept connections tcp
+1:M 07 Oct 2026 10:16:00.001 # WARNING: The TCP backlog setting of 511 cannot be enforced because /proc/sys/net/core/somaxconn is set to the lower value of 128.
+42:S 07 Oct 2026 10:16:05.500 * MASTER <-> REPLICA sync: Finished with success

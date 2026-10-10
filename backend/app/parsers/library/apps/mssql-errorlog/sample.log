@@ -1,0 +1,4 @@
+2026-10-07 10:15:00.45 spid52      Starting up database 'billing'.
+2026-10-07 10:15:32.12 Logon       Error: 18456, Severity: 14, State: 8.
+2026-10-07 10:15:32.12 Logon       Login failed for user 'sa'. Reason: Password did not match that for the login provided. [CLIENT: 198.51.100.7]
+2026-10-07 10:16:00.10 Logon       Login succeeded for user 'CORP\svc-reporting'. Connection made using Windows authentication. [CLIENT: 10.0.0.25]

@@ -1,0 +1,11 @@
+name = "Login history (last / lastb output)"
+vendor = "Unix and Linux (Solaris, AIX, HP-UX, old Linux)"
+description = """
+Output of `last` / `lastb` (wtmp / btmp) collected from legacy systems: user, terminal, remote host, login time,
+logout time or state (still logged in, crash, reboot) and session duration. `reboot` / `shutdown` pseudo-users
+become `event.action: reboot`. Trailing `wtmp begins` lines are dropped; the year is inferred.
+"""
+input_format = "lines"
+detect = ['^\S+\s+(?:pts/\d+|tty\w*|console|system boot|ssh:notty|:\d+|ftpd\d+)\s+.*\b(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \w{3} [ \d]\d \d{2}:\d{2}']
+fields = ["user.name", "last.tty", "source.address", "event.action", "last.state", "last.duration"]
+expected_events = 5

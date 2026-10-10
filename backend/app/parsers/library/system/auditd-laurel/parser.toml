@@ -1,0 +1,23 @@
+name = "Linux auditd via LAUREL"
+vendor = "Linux audit framework + LAUREL"
+description = """
+auditd events pre-processed by [LAUREL](https://github.com/threathunters-io/laurel): one JSON object per event,
+with the SYSCALL, EXECVE, CWD, PATH, SOCKADDR and PROCTITLE records grouped and hex strings decoded. Maps the
+command line, working directory, file, socket address, user, outcome and LAUREL's process tracking
+(`SPAWNED_BY`, `PID.EVENT_ID`, labels) to ECS. The full LAUREL object stays under `auditd.laurel`. Read as lines:
+the JSON is decoded in the filter.
+"""
+notes = """
+Raw `audit.log` in the workspace? Use **Convert with LAUREL** above the input: the server runs LAUREL on it, with
+the host enrichments (process tree, user names, containers) switched off since the file comes from another
+machine. In production LAUREL runs as an auditd plugin on each host and adds them; the parser maps them when
+present. See the README ("auditd with LAUREL") for the production setup.
+"""
+input_format = "lines"
+detect = ['^\{"ID":"\d+\.\d+:\d+"']
+fields = ["auditd.record_type", "auditd.sequence", "event.action", "event.category", "event.outcome",
+          "process.pid", "process.parent.pid", "process.executable", "process.name", "process.command_line",
+          "process.working_directory", "process.entity_id", "process.parent.executable", "user.id",
+          "user.audit.id", "user.name", "source.ip", "destination.ip", "destination.port", "file.path",
+          "auditd.key", "host.name"]
+priority = 1

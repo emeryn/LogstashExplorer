@@ -112,8 +112,12 @@ class AgentArgs(BaseModel):
     input_fields: InputFields = Field(default=None, description=FIELDS_HELP)
 
 
+class LaurelArgs(BaseModel):
+    input: str = Field(min_length=1, max_length=MAX_INPUT, description="Raw auditd records (audit.log content)")
+
+
 class ListParsersArgs(BaseModel):
-    category: Literal["windows", "web", "network", "system", "industrial"] | None = None
+    category: Literal["windows", "cloud", "web", "network", "system", "apps", "industrial"] | None = None
 
 
 class ParserRef(BaseModel):
@@ -202,6 +206,11 @@ async def _run_agent(ctx: Ctx, a: AgentArgs) -> dict:
     }
 
 
+async def _convert_auditd(ctx: Ctx, a: LaurelArgs) -> dict:
+    body = workspace.LaurelIn(input=a.input)
+    return await workspace.pipeline_laurel(body, ctx.request, principal=ctx.principal, db=ctx.db)
+
+
 async def _list_parsers(ctx: Ctx, a: ListParsersArgs) -> dict:
     return {"parsers": [p.summary() for p in parsers.all_parsers() if not a.category or p.category == a.category]}
 
@@ -225,7 +234,7 @@ async def _apply_parser(ctx: Ctx, a: ApplyParserArgs) -> dict:
         config=parser.filter,
         input=a.input if a.input is not None else parser.sample,
         input_format=a.input_format or parser.input_format,
-        input_fields=a.input_fields,
+        input_fields=a.input_fields if a.input_fields is not None or a.input is not None else dict(parser.input_fields),
     )
     result = await workspace.pipeline_run(body, principal=ctx.principal, db=ctx.db)
     return {"parser": parser.id, "filter": parser.filter, **result}
@@ -289,6 +298,14 @@ TOOLS = {
             "Run a Logstash configuration on sample logs in the isolated runner and return events and errors.",
             RunArgs,
             _run_pipeline,
+            read_only=True,
+        ),
+        Tool(
+            "convert_auditd",
+            "Pre-process raw auditd records with LAUREL: one JSON object per event (SYSCALL, EXECVE, PATH… "
+            "grouped, hex strings decoded). Parse the result with the `auditd-laurel` library parser.",
+            LaurelArgs,
+            _convert_auditd,
             read_only=True,
         ),
         Tool(

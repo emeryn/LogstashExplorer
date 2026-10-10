@@ -1,0 +1,10 @@
+name = "AWS GuardDuty findings"
+vendor = "Amazon Web Services"
+description = """
+GuardDuty findings as JSON, either the finding itself (S3 export) or wrapped in an EventBridge event
+(`detail-type: GuardDuty Finding`). Maps the finding type to `rule.name`, title, severity, account, region,
+resource and the remote address of port-probe, network-connection and API-call actions.
+"""
+input_format = "json"
+detect = ['"type"\s*:\s*"[A-Za-z]+:[A-Za-z0-9]+/[\w.!-]+"', '"detail-type"\s*:\s*"GuardDuty Finding"']
+fields = ["rule.name", "message", "event.severity", "event.kind", "cloud.account.id", "cloud.region", "source.ip", "aws.guardduty.resource", "aws.guardduty.service"]

@@ -29,8 +29,15 @@ TOKEN = os.environ.get("LSX_RUNNER_TOKEN", "")
 FAILURE_TAG = re.compile(r"^_.*(failure|error)", re.IGNORECASE)
 
 
-def run(config: str, data: str, fmt: str, ecs: str) -> dict:
-    body = {"config": config, "input": data, "input_format": fmt, "ecs_compatibility": ecs, "timeout": 120}
+def run(config: str, data: str, fmt: str, ecs: str, fields: dict | None = None) -> dict:
+    body = {
+        "config": config,
+        "input": data,
+        "input_format": fmt,
+        "ecs_compatibility": ecs,
+        "timeout": 120,
+        "fields": fields or None,
+    }
     req = urllib.request.Request(  # noqa: S310 - local runner URL from the operator
         f"{URL}/run",
         data=json.dumps(body).encode(),
@@ -53,7 +60,7 @@ def lookup(event: dict, path: str):
 
 def check(parser, ecs: str) -> list[str]:
     meta = tomllib.loads((LIBRARY / parser.category / parser.id / "parser.toml").read_text(encoding="utf-8"))
-    res = run(parser.filter, parser.sample, parser.input_format, ecs)
+    res = run(parser.filter, parser.sample, parser.input_format, ecs, dict(parser.input_fields))
     problems = [f"config: {e}" for e in res.get("config_errors", [])]
     problems += [f"logstash: {e[-300:]}" for e in res.get("errors", [])]
     events = res.get("events", [])

@@ -1,0 +1,4 @@
+DNS Server log file creation at 10/7/2026 10:00:00 AM
+10/7/2026 10:15:32 AM 0E5C PACKET  000001E5A3B4C5D6 UDP Rcv 10.0.0.5        1a2b   Q [0001   D   NOERROR] A      (3)www(7)example(3)org(0)
+10/7/2026 10:15:32 AM 0E5C PACKET  000001E5A3B4C5D6 UDP Snd 10.0.0.5        1a2b R Q [8081   DR  NOERROR] A      (3)www(7)example(3)org(0)
+10/7/2026 10:15:33 AM 0E60 PACKET  000001E5A3B4C5E0 UDP Rcv 10.0.0.66       5151   Q [0001   D   NOERROR] TXT    (6)x7k2p9(6)dga-c2(7)example(3)net(0)

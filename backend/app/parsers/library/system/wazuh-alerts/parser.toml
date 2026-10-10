@@ -1,0 +1,10 @@
+name = "Wazuh / OSSEC alerts (alerts.json)"
+vendor = "Wazuh, OSSEC"
+description = """
+Wazuh manager `alerts.json`: rule (ID, level, description, groups, MITRE ATT&CK), agent, decoder, decoded data
+(source IP, users) and full log. The alert is kept under `wazuh`; `rule.*`, `host.*`, `source.ip`, `user.name` and
+`threat.technique.id` are mapped to ECS.
+"""
+input_format = "json"
+detect = ['"rule"\s*:\s*\{.*"level"\s*:\s*\d+.*"agent"\s*:\s*\{.*"manager"\s*:']
+fields = ["rule.id", "rule.name", "event.severity", "event.kind", "host.name", "host.ip", "source.ip", "user.name", "wazuh.agent.id", "wazuh.decoder.name"]

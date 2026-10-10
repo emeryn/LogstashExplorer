@@ -1,0 +1,10 @@
+name = "Zeek BACnet log (ICSNPP bacnet.log)"
+vendor = "Zeek + CISA ICSNPP"
+description = """
+`bacnet.log` from the CISA ICSNPP BACnet Zeek plugin (building automation), in JSON: BVLC function, PDU type and
+service, invoke ID and result. Writes, reinitialisation and communication control are tagged
+`ot_critical_operation`.
+"""
+input_format = "json"
+detect = ['"bvlc_function"\s*:\s*"', '"pdu_service"\s*:\s*"']
+fields = ["source.ip", "destination.ip", "event.action", "zeek.bacnet.bvlc_function", "zeek.bacnet.pdu_type", "tags"]

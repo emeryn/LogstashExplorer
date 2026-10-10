@@ -1,0 +1,3 @@
+[2026-10-07 10:15:32,123] INFO [KafkaServer id=1] started (kafka.server.KafkaServer)
+[2026-10-07 10:16:00,001] WARN [SocketServer listenerType=BROKER, nodeId=1] Unexpected error from /198.51.100.7 (channelId=10.0.0.11:9092-198.51.100.7:55012-0); closing connection (org.apache.kafka.common.network.Selector)
+[2026-10-07 10:16:30,500] ERROR [ReplicaFetcher replicaId=1, leaderId=2, fetcherId=0] Error for partition orders-3 at offset 1820 (kafka.server.ReplicaFetcherThread)

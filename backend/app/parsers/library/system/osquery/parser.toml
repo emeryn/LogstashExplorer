@@ -1,0 +1,9 @@
+name = "osquery results (osqueryd.results.log)"
+vendor = "osquery, Fleet"
+description = """
+osquery scheduled query results in event format (differential `added` / `removed` rows, or snapshots): query name,
+host identifier, action, decorations and the result columns (kept under `osquery.result.columns`).
+"""
+input_format = "json"
+detect = ['"hostIdentifier"\s*:\s*"[^"]+".*"calendarTime"\s*:', '"name"\s*:\s*"pack[_/][^"]+".*"columns"\s*:']
+fields = ["host.name", "rule.name", "event.action", "osquery.result.columns", "event.dataset"]

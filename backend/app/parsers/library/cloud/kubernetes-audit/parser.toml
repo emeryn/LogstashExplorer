@@ -1,0 +1,10 @@
+name = "Kubernetes API server audit log"
+vendor = "Kubernetes (EKS, AKS, GKE, OpenShift, vanilla)"
+description = """
+Kubernetes API server audit events (`audit.k8s.io/v1`, JSON lines from the log backend or a webhook): verb,
+user and groups, source IP, user agent, requested resource (namespace / name), response code and authorization
+decision. The event is kept under `kubernetes.audit`.
+"""
+input_format = "json"
+detect = ['"apiVersion"\s*:\s*"audit\.k8s\.io/v1"', '"kind"\s*:\s*"Event".*"auditID"\s*:']
+fields = ["event.action", "user.name", "source.ip", "user_agent.original", "url.original", "kubernetes.namespace", "http.response.status_code", "event.outcome", "kubernetes.audit.objectRef"]

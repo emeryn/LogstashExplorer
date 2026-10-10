@@ -1,0 +1,10 @@
+name = "Solaris audit (BSM, praudit -l)"
+vendor = "Oracle Solaris, illumos"
+description = """
+Solaris Basic Security Module audit records converted to one line per record with `praudit -l` (comma-separated
+tokens): event name, host, time, subject (audit / effective / real user, PID, terminal address), path, exec
+arguments and return status. Token layouts vary with the audit policy: check on your own records.
+"""
+input_format = "lines"
+detect = ['^header,\d+,\d+,[^,]+,[^,]*,[^,]+,\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}']
+fields = ["event.action", "host.hostname", "user.name", "user.effective.name", "process.pid", "source.ip", "event.outcome", "file.path", "solaris.bsm.session_id", "solaris.bsm.return_value"]

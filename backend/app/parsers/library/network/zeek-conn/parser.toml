@@ -1,0 +1,9 @@
+name = "Zeek connection log (conn.log)"
+vendor = "Zeek (Bro)"
+description = """
+Zeek `conn.log` in JSON: 4-tuple, transport, detected service, duration, bytes and packets per direction,
+connection state and history. Feeds network flow analysis.
+"""
+input_format = "json"
+detect = ['"conn_state"\s*:\s*"(?:S0|S1|SF|REJ|S2|S3|RSTO|RSTR|RSTOS0|RSTRH|SH|SHR|OTH)"']
+fields = ["source.ip", "source.port", "destination.ip", "destination.port", "network.transport", "network.protocol", "source.bytes", "destination.bytes", "zeek.conn.conn_state", "zeek.conn.duration", "zeek.session_id"]

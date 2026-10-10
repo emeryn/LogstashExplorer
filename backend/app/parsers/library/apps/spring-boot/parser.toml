@@ -1,0 +1,9 @@
+name = "Spring Boot default console log"
+vendor = "Spring Boot 2.x / 3.x"
+description = """
+Spring Boot's default log layout (`2026-10-07T10:15:32.123+02:00  INFO 4321 --- [app] [main] o.s.b.Logger : msg`),
+with or without the application name (Spring Boot 3.2+): level, PID, application, thread, logger and message.
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}\.\d{3}\S* +(?:TRACE|DEBUG|INFO|WARN|ERROR) +\d+ --- \[']
+fields = ["log.level", "process.pid", "service.name", "process.thread.name", "log.logger", "message"]

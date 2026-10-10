@@ -1,0 +1,10 @@
+name = "Microsoft Entra ID sign-in logs"
+vendor = "Microsoft Entra ID (Azure AD)"
+description = """
+Entra ID (Azure AD) `SignInLogs` / `NonInteractiveUserSignInLogs` records exported by a diagnostic setting: user,
+application, client IP, location, device, conditional access and the result code (`0` = success, otherwise an
+AADSTS error such as 50126 invalid credentials).
+"""
+input_format = "json"
+detect = ['"category"\s*:\s*"(?:SignInLogs|NonInteractiveUserSignInLogs|ServicePrincipalSignInLogs)"']
+fields = ["user.name", "user.full_name", "source.ip", "event.outcome", "error.code", "error.message", "user_agent.original", "source.geo.country_iso_code", "source.geo.city_name", "azure.signinlogs.properties.appDisplayName", "azure.signinlogs.properties.conditionalAccessStatus"]

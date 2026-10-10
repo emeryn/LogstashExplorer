@@ -76,6 +76,8 @@ const EDITOR_OPTIONS = {
   renderWhitespace: "selection" as const,
 };
 const MAX_TEXT = 5 * 1024 * 1024;
+// A raw auditd record (audit.log), which LAUREL can group into one JSON object per event.
+const RAW_AUDITD = /^(?:node=\S+ )?type=[A-Z_]+ msg=audit\(\d+\.\d+:\d+\): ?/m;
 const DETECT_SAMPLE = 64 * 1024;
 
 function failureTags(events: Record<string, unknown>[]): Record<string, number> {
@@ -135,6 +137,9 @@ export default function Workspace({
   const [dragging, setDragging] = useState(false);
   const [importInfo, setImportInfo] = useState("");
   const [ecs, setEcs] = useState("disabled");
+  const [laurelAvailable, setLaurelAvailable] = useState(false);
+  const [converting, setConverting] = useState(false);
+  const [rawBackup, setRawBackup] = useState<string | null>(null);
 
   // Parser library & format detection
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -170,8 +175,11 @@ export default function Workspace({
   }, []);
   useEffect(() => {
     loadProjects();
-    get<{ ecs_compatibility: string }>("/api/workspace/settings")
-      .then((s) => setEcs(s.ecs_compatibility))
+    get<{ ecs_compatibility: string; laurel: boolean }>("/api/workspace/settings")
+      .then((s) => {
+        setEcs(s.ecs_compatibility);
+        setLaurelAvailable(s.laurel);
+      })
       .catch(() => undefined);
   }, [loadProjects]);
 
@@ -234,7 +242,12 @@ export default function Workspace({
     setInputFormat(parser.input_format);
     if (withSample) {
       setInput(parser.sample);
-      setImportInfo(`Loaded the "${parser.name}" filter and its sample.`);
+      if (Object.keys(parser.input_fields).length) setFieldRows(toRows(parser.input_fields));
+      setImportInfo(
+        Object.keys(parser.input_fields).length
+          ? `Loaded the "${parser.name}" filter, its sample and its input fields.`
+          : `Loaded the "${parser.name}" filter and its sample.`,
+      );
     } else {
       setImportInfo(`Loaded the "${parser.name}" filter (Ctrl+Z in the editor to undo).`);
     }
@@ -286,6 +299,43 @@ export default function Workspace({
     } catch (e) {
       setImportInfo(e instanceof Error ? `Import failed: ${e.message}` : "Import failed");
     }
+  };
+
+  // ---- auditd pre-processing with LAUREL (server side) ------------------------------------
+  const rawAuditd = useMemo(
+    () => laurelAvailable && inputFormat === "lines" && RAW_AUDITD.test(input.slice(0, 65536)),
+    [laurelAvailable, inputFormat, input],
+  );
+
+  const convertWithLaurel = async () => {
+    setConverting(true);
+    setImportInfo("Running LAUREL on the auditd records…");
+    try {
+      const res = await post<{ input: string; events: number; truncated: boolean; unparsed_lines: number }>(
+        "/api/pipeline/laurel",
+        { input },
+      );
+      setRawBackup(input);
+      setInput(res.input);
+      setInputFormat("lines");
+      setImportInfo(
+        `LAUREL grouped ${input.split("\n").filter((l) => l.trim()).length} raw lines into ${res.events} audit events` +
+          (res.truncated ? " (truncated)" : "") +
+          (res.unparsed_lines ? `, ${res.unparsed_lines} lines could not be parsed` : "") +
+          ". Parse them with the “Linux auditd via LAUREL” parser.",
+      );
+    } catch (e) {
+      setImportInfo(e instanceof Error ? `LAUREL conversion failed: ${e.message}` : "LAUREL conversion failed");
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const restoreRaw = () => {
+    if (rawBackup === null) return;
+    setInput(rawBackup);
+    setRawBackup(null);
+    setImportInfo("Raw auditd records restored.");
   };
 
   const onDrop = (e: DragEvent) => {
@@ -650,7 +700,33 @@ export default function Workspace({
                 <span className="spacer" />
                 <span className="muted small">{input ? input.split("\n").length : 0} lines</span>
               </div>
-              {importInfo && <div className="info-line">{importInfo}</div>}
+              {importInfo && (
+                <div className="info-line">
+                  {importInfo}
+                  {rawBackup !== null && !rawAuditd && (
+                    <button className="small ghost" style={{ marginLeft: 8 }} onClick={restoreRaw}>
+                      Restore raw records
+                    </button>
+                  )}
+                </div>
+              )}
+              {rawAuditd && (
+                <div className="suggestion">
+                  <Icon name="terminal" />
+                  <span>
+                    Raw <strong>auditd</strong> records
+                  </span>
+                  <span className="spacer" />
+                  <button
+                    className="small primary"
+                    disabled={converting}
+                    onClick={convertWithLaurel}
+                    title="LAUREL groups the records of each event (SYSCALL, EXECVE, PATH…) into one JSON line and decodes hex strings"
+                  >
+                    {converting ? "Converting…" : "Convert with LAUREL"}
+                  </button>
+                </div>
+              )}
               {showSuggestion && (
                 <div className="suggestion">
                   <Icon name="wand" />
@@ -683,7 +759,8 @@ export default function Workspace({
                 />
               </div>
               <div className="drop-hint">
-                <Icon name="upload" /> Drop a file here — .log, .json, .jsonl, Windows .evtx (converted automatically)
+                <Icon name="upload" /> Drop a file here — .log, .json, .jsonl, Windows .evtx (converted automatically),
+                auditd audit.log (LAUREL)
               </div>
             </>
           )}

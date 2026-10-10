@@ -1,0 +1,11 @@
+name = "IBM AIX syslog"
+vendor = "IBM AIX 5.3 – 7.3"
+description = """
+AIX `syslogd` lines, which include the facility and priority (`auth|security:info`) after the host name, and
+relayed messages (`Message forwarded from <host>:`, whose origin becomes `host.hostname`). SSH logins and `su`
+attempts are mapped to `user.*`, `source.*` and `event.outcome`.
+"""
+input_format = "lines"
+detect = ['^\w{3} [ \d]\d \d{2}:\d{2}:\d{2} \S+ (?:[a-z0-9]+(?:\|[a-z0-9]+)*:(?:emerg|alert|crit|err|warning|warn|notice|info|debug)(?:\|[a-z]+)? |Message forwarded from )']
+fields = ["host.hostname", "aix.facility", "log.level", "process.name", "user.name", "source.ip", "event.outcome", "aix.relay_host", "message"]
+priority = 1

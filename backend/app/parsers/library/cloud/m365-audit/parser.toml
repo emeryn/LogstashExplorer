@@ -1,0 +1,10 @@
+name = "Microsoft 365 unified audit log"
+vendor = "Microsoft 365"
+description = """
+Microsoft 365 audit records from the Office 365 Management Activity API (SharePoint / OneDrive, Exchange, Entra
+ID, Teams…): operation, workload, user, client IP (port and IPv6 brackets removed), result and user agent. The
+record is kept under `o365.audit`.
+"""
+input_format = "json"
+detect = ['"Workload"\s*:\s*"(?:SharePoint|OneDrive|Exchange|AzureActiveDirectory|MicrosoftTeams|SecurityComplianceCenter|PowerBI)"', '"RecordType"\s*:\s*\d+.*"Operation"\s*:']
+fields = ["event.action", "event.provider", "user.name", "source.ip", "event.outcome", "user_agent.original", "file.name", "o365.audit.RecordType", "o365.audit.ObjectId"]

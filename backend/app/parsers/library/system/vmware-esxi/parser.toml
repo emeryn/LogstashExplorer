@@ -1,0 +1,10 @@
+name = "VMware ESXi syslog"
+vendor = "VMware ESXi (vSphere)"
+description = """
+ESXi host syslog (`<pri>timestamp host program: level process[pid] [Originator@6876 sub=… opID=… user=…] message`)
+for hostd, vpxa, vmkernel, sshd, shell…: program, level, sub-component, operation ID, user and message, plus user
+logins (`User x@ip logged in`). Formats differ between ESXi releases: check on your own logs.
+"""
+input_format = "lines"
+detect = ['\[Originator@6876 ', '^(?:<\d+>)?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z \S+ (?:Hostd|Vpxa|vmkernel|hostd-probe|Rhttpproxy|shell|sshd|vobd|fdm)(?:\[\d+\])?: ']
+fields = ["host.hostname", "process.name", "log.level", "esxi.sub", "esxi.op_id", "esxi.user", "user.name", "source.ip", "message"]

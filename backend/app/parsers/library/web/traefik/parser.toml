@@ -1,0 +1,10 @@
+name = "Traefik access log (CLF)"
+vendor = "Traefik Proxy"
+description = """
+Traefik access log in the default Common Log Format: combined fields plus request count, router name, upstream
+service URL and duration (ms).
+"""
+input_format = "lines"
+detect = ['^\S+ \S+ \S+ \[\d{2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2} [+-]\d{4}\] "[^"]*" \d{3} \d+ "[^"]*" "[^"]*" \d+ "[^"]*" "[^"]*" \d+ms$']
+fields = ["source.address", "http.request.method", "url.original", "http.response.status_code", "user_agent.original", "traefik.access.router_name", "traefik.access.service_url", "traefik.access.duration_ms", "event.dataset"]
+priority = 1

@@ -169,7 +169,7 @@ export interface Project extends ProjectMeta {
   input_fields: InputFields;
 }
 
-export type ParserCategory = "windows" | "web" | "network" | "system" | "industrial";
+export type ParserCategory = "windows" | "cloud" | "web" | "network" | "system" | "apps" | "industrial";
 
 export interface ParserSummary {
   id: string;
@@ -187,6 +187,7 @@ export interface Parser extends ParserSummary {
   filter: string;
   sample: string;
   notes: string;
+  input_fields: InputFields;
 }
 
 export interface ApiToken {

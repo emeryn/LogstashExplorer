@@ -1,0 +1,10 @@
+name = "Google Cloud Audit Logs"
+vendor = "Google Cloud"
+description = """
+Cloud Audit Logs entries (Admin Activity, Data Access, System Event, Policy Denied) exported as LogEntry JSON
+(Pub/Sub, Cloud Storage or BigQuery sinks). Maps the principal, caller IP and user agent, method, service, project,
+resource and status to ECS; the LogEntry is kept under `gcp.audit`.
+"""
+input_format = "json"
+detect = ['"@type"\s*:\s*"type\.googleapis\.com/google\.cloud\.audit\.AuditLog"', '"logName"\s*:\s*"[^"]*cloudaudit\.googleapis\.com']
+fields = ["user.email", "source.ip", "user_agent.original", "event.action", "event.provider", "cloud.project.id", "event.outcome", "log.level", "gcp.audit.resourceName"]

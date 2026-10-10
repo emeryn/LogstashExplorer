@@ -1,0 +1,9 @@
+name = "systemd journal (journalctl -o json)"
+vendor = "systemd-journald"
+description = """
+systemd journal entries exported with `journalctl -o json` (or a journald → JSON shipper): message, host, process
+(name, PID, executable, command line), unit, user ID and priority. Journal fields are kept under `journald`.
+"""
+input_format = "json"
+detect = ['"__REALTIME_TIMESTAMP"\s*:\s*"\d{16}"', '"_SYSTEMD_UNIT"\s*:']
+fields = ["message", "host.hostname", "process.name", "process.pid", "process.executable", "systemd.unit", "user.id", "log.level", "event.dataset"]

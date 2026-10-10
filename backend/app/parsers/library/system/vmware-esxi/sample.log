@@ -1,0 +1,4 @@
+<166>2026-10-07T08:15:32.123Z esx01.corp.local Hostd: info hostd[2099612] [Originator@6876 sub=Vimsvc.ha-eventmgr opID=esxui-1a2b-3c4d user=root] Event 1234 : User root@10.0.0.5 logged in as VMware-client/6.5.0
+<166>2026-10-07T08:15:40.000Z esx01.corp.local Hostd: info hostd[2099612] [Originator@6876 sub=Vimsvc.TaskManager opID=esxui-5e6f-7a8b user=root] Task Created : haTask-ha-host-vim.HostSystem.enterMaintenanceMode-1820
+<38>2026-10-07T08:16:01.551Z esx01.corp.local sshd[1234567]: Accepted keyboard-interactive/pam for root from 10.0.0.5 port 51234 ssh2
+<38>2026-10-07T08:16:30.000Z esx01.corp.local sshd[1234570]: Failed password for root from 198.51.100.7 port 55012 ssh2

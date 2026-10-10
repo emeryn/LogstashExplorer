@@ -1,0 +1,9 @@
+name = "vsftpd log"
+vendor = "vsftpd"
+description = """
+vsftpd log (`/var/log/vsftpd.log`, `xferlog_std_format=NO`): connections, logins (OK / FAIL) and transfers with
+user, client address, file and size.
+"""
+input_format = "lines"
+detect = ['^\w{3} \w{3} [ \d]\d \d{2}:\d{2}:\d{2} \d{4} \[pid \d+\] (?:\[[^\]]+\] )?(?:OK |FAIL )?[A-Z]+(?: [A-Z]+)?: Client "']
+fields = ["process.pid", "user.name", "event.action", "event.outcome", "source.ip", "file.path", "file.size"]

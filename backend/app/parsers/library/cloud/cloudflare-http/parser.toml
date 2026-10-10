@@ -1,0 +1,9 @@
+name = "Cloudflare HTTP requests (Logpush)"
+vendor = "Cloudflare"
+description = """
+Cloudflare `http_requests` dataset from Logpush (JSON, RFC 3339 timestamps): client, request, edge and origin
+status, bytes, cache status, security action, WAF attack and bot scores. Fields are kept under `cloudflare`.
+"""
+input_format = "json"
+detect = ['"RayID"\s*:\s*"[0-9a-f]{16}"', '"ClientRequestHost"\s*:']
+fields = ["source.ip", "url.domain", "http.request.method", "url.original", "http.response.status_code", "http.response.body.bytes", "user_agent.original", "source.geo.country_iso_code", "event.action", "cloudflare.CacheCacheStatus", "cloudflare.WAFAttackScore"]

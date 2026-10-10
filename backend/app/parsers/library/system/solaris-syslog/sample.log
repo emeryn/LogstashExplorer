@@ -1,0 +1,6 @@
+Oct  7 10:15:32 sol10-db sshd[1234]: [ID 800047 auth.info] Accepted publickey for alice from 10.0.0.5 port 51234 ssh2
+Oct  7 10:15:40 sol10-db sshd[1240]: [ID 800047 auth.info] Failed password for root from 198.51.100.7 port 55012 ssh2
+Oct  7 10:16:02 sol10-db su: [ID 366847 auth.warning] 'su root' failed for alice on /dev/pts/2
+Oct  7 10:16:20 sol11-app su: [ID 810491 auth.crit] 'su oracle' succeeded for bob on /dev/pts/3
+Oct  7 10:17:00 sol11-app login: [ID 644210 auth.notice] ROOT LOGIN /dev/console
+Oct  7 10:18:00 sol10-db genunix: [ID 540533 kern.notice] SunOS Release 5.10 Version Generic_150400-65 64-bit

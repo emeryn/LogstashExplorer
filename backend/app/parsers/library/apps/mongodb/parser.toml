@@ -1,0 +1,10 @@
+name = "MongoDB structured log (4.4+)"
+vendor = "MongoDB"
+description = """
+MongoDB 4.4+ structured JSON log (`{"t":{"$date":…},"s":"I","c":"NETWORK","id":…,"msg":…,"attr":{…}}`): severity,
+component, message ID, context, message and attributes; authentication results fill `user.name`, `source.ip` and
+`event.outcome`. The entry is kept under `mongodb.log`.
+"""
+input_format = "json"
+detect = ['^\{"t":\{"\$date":"\d{4}-\d{2}-\d{2}T[^"]+"\},"s":"[FEWID]\d?","c":"[A-Z_]+"']
+fields = ["log.level", "mongodb.log.component", "event.code", "message", "user.name", "source.ip", "event.outcome"]

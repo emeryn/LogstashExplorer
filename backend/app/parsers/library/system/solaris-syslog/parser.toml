@@ -1,0 +1,11 @@
+name = "Oracle Solaris syslog (with message IDs)"
+vendor = "Oracle Solaris 8 – 11, illumos"
+description = """
+Solaris syslog lines with the `[ID <msgid> <facility>.<level>]` tag added by `syslogd` (`/var/adm/messages`,
+`/var/log/authlog`): message ID, facility and level, plus SSH logins, `su` attempts and root logins mapped to
+`user.*`, `source.*`, `event.action` and `event.outcome`.
+"""
+input_format = "lines"
+detect = ['^(?:<\d+>)?\w{3} [ \d]\d \d{2}:\d{2}:\d{2} \S+ [^\s:]+(?:\[\d+\])?: \[ID \d+ \w+\.\w+\] ']
+fields = ["host.hostname", "process.name", "solaris.msgid", "log.syslog.facility.name", "log.level", "user.name", "user.target.name", "source.ip", "event.action", "event.outcome", "message"]
+priority = 1

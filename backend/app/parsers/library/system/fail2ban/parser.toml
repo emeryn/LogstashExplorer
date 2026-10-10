@@ -1,0 +1,8 @@
+name = "Fail2ban log"
+vendor = "Fail2ban"
+description = """
+Fail2ban log (`/var/log/fail2ban.log`): jail, action (Found, Ban, Unban, Restore Ban…) and offending address.
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3} fail2ban\.\S+ +\[\d+\]: ']
+fields = ["log.logger", "process.pid", "log.level", "fail2ban.jail", "event.action", "source.ip"]

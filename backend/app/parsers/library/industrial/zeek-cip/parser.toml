@@ -1,0 +1,10 @@
+name = "Zeek EtherNet/IP CIP log (ICSNPP cip.log)"
+vendor = "Zeek + CISA ICSNPP"
+description = """
+`cip.log` from the CISA ICSNPP EtherNet/IP Zeek plugin (Rockwell / Allen-Bradley and other CIP devices), in JSON:
+CIP service and status, class, instance and attribute. Writes, resets and configuration services are tagged
+`ot_critical_operation`.
+"""
+input_format = "json"
+detect = ['"cip_service"\s*:\s*"', '"cip_sequence_count"\s*:']
+fields = ["source.ip", "destination.ip", "destination.port", "event.action", "zeek.cip.class_name", "zeek.cip.cip_status", "tags"]

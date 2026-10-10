@@ -1,0 +1,10 @@
+name = "Linux netfilter / iptables / UFW log"
+vendor = "Linux (iptables, nftables LOG, UFW, firewalld)"
+description = """
+Kernel log lines produced by the netfilter LOG target (iptables, nftables `log`, UFW, firewalld): log prefix,
+interfaces, MAC, addresses, protocol, ports, TTL and TCP flags, with or without the syslog header.
+"""
+input_format = "lines"
+detect = ['(?:kernel: )?(?:\[\s*\d+\.\d+\] )?.*\bIN=\S* OUT=\S* .*SRC=\S+ DST=\S+ .*PROTO=\w+']
+fields = ["iptables.prefix", "observer.ingress.interface.name", "source.ip", "destination.ip", "network.transport", "source.port", "destination.port", "iptables.ttl", "event.action"]
+priority = 1

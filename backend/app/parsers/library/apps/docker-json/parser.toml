@@ -1,0 +1,15 @@
+name = "Docker container logs (json-file driver)"
+vendor = "Docker, Podman"
+description = """
+Container logs written by the Docker `json-file` logging driver (`/var/lib/docker/containers/<id>/<id>-json.log`).
+Read the files as plain lines: their `log` key would collide with the ECS `log` object set by the file input, so
+the JSON is decoded here. The line goes to `message` (trailing newline removed), the stream to `log.iostream`, the
+timestamp keeps its precision and the container ID is taken from the file path.
+"""
+input_format = "lines"
+detect = ['^\{"log":".*","stream":"(?:stdout|stderr)","time":"\d{4}-\d{2}-\d{2}T']
+fields = ["message", "log.iostream", "container.id", "event.dataset", "event.original"]
+priority = 1
+
+[input_fields]  # set by the input in production (e.g. the file path); used by the sample
+"[log][file][path]" = "/var/lib/docker/containers/3f4e5d6c7b8a99887766554433221100ffeeddccbbaa99887766554433221100/3f4e5d6c7b8a99887766554433221100ffeeddccbbaa99887766554433221100-json.log"

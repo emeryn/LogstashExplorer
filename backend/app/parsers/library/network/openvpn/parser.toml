@@ -1,0 +1,9 @@
+name = "OpenVPN server log"
+vendor = "OpenVPN Community / Access Server"
+description = """
+OpenVPN server log (`--log` file with timestamps, or syslog `openvpn[pid]:`): client address and user, connection
+initiated / terminated, assigned VPN address and authentication failures.
+"""
+input_format = "lines"
+detect = ['(?:openvpn(?:\[\d+\])?: |^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} )(?:[^/\s]+/)?[\d.:a-fA-F]+:\d+ (?:\[[^\]]+\] )?(?:Peer Connection|MULTI|TLS|SIGTERM|VERIFY|PLUGIN|SENT|\[)']
+fields = ["source.ip", "source.port", "user.name", "event.action", "event.outcome", "openvpn.vpn_ip", "message"]

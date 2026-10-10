@@ -1,0 +1,9 @@
+name = "Snort alerts (alert_fast)"
+vendor = "Snort 2 / Snort 3"
+description = """
+Snort `alert_fast` output (`MM/DD-hh:mm:ss.us [**] [gid:sid:rev] message [**] [Classification: …] [Priority: n]
+{PROTO} src:port -> dst:port`), Snort 2 and Snort 3. The year is not logged: it is inferred.
+"""
+input_format = "lines"
+detect = ['^\d{2}/\d{2}(?:/\d{2})?-\d{2}:\d{2}:\d{2}\.\d+ +\[\*\*\] \[\d+:\d+:\d+\] ']
+fields = ["snort.gid", "rule.id", "rule.version", "rule.name", "rule.category", "event.severity", "network.transport", "source.ip", "source.port", "destination.ip", "destination.port", "event.kind"]

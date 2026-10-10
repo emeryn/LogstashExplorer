@@ -1,0 +1,4 @@
+2026-10-07 10:15:30,101 fail2ban.filter         [1234]: INFO    [sshd] Found 198.51.100.7 - 2026-10-07 10:15:30
+2026-10-07 10:15:32,123 fail2ban.actions        [1234]: NOTICE  [sshd] Ban 198.51.100.7
+2026-10-07 11:15:32,200 fail2ban.actions        [1234]: NOTICE  [sshd] Unban 198.51.100.7
+2026-10-07 10:00:00,000 fail2ban.server         [1234]: INFO    Starting Fail2ban v1.1.0

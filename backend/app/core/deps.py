@@ -52,7 +52,7 @@ async def _authenticate(request: Request, db: AsyncSession) -> Principal | None:
 
 
 # POST routes a read-only token may call: they compute or test, they never change stored data.
-READ_ONLY_POSTS = {"/api/pipeline/run", "/api/pipeline/evtx", "/api/parsers/detect", "/api/mcp"}
+READ_ONLY_POSTS = {"/api/pipeline/run", "/api/pipeline/evtx", "/api/pipeline/laurel", "/api/parsers/detect", "/api/mcp"}
 
 
 async def get_principal_partial(request: Request, db: AsyncSession = Depends(get_db)) -> Principal:

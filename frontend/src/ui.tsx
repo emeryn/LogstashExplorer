@@ -47,6 +47,7 @@ const PATHS = {
   edit: "M12 20h9 M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4z",
   external: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6 M15 3h6v6 M10 14L21 3",
   dot: "M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2z",
+  cloud: "M7 19h10a4.5 4.5 0 0 0 .6-8.96A6.5 6.5 0 0 0 5.2 9.2 5 5 0 0 0 7 19z",
 } as const;
 
 export type IconName = keyof typeof PATHS;

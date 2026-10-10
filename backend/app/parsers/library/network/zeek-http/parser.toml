@@ -1,0 +1,11 @@
+name = "Zeek HTTP log (http.log)"
+vendor = "Zeek (Bro)"
+description = """
+Zeek `http.log` in JSON, read as lines (its `host` key would collide with the host object added by ECS inputs, so
+the JSON is decoded in the filter): method, host, URI, referrer, version, user agent, body sizes, status, MIME
+types and Zeek tags (kept under `zeek.http.tags`).
+"""
+input_format = "lines"
+detect = ['"trans_depth"\s*:\s*\d+.*"method"\s*:\s*"[A-Z]+"']
+fields = ["source.ip", "destination.ip", "http.request.method", "url.domain", "url.original", "user_agent.original", "http.response.status_code", "http.response.body.bytes", "zeek.http.status_msg", "event.original"]
+priority = 1

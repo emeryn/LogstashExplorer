@@ -1,0 +1,4 @@
+<189>123: *Oct  7 10:15:32.123: %LINK-3-UPDOWN: Interface GigabitEthernet0/1, changed state to down
+<189>Oct  7 10:15:40 rtr01 124: Oct  7 10:15:40.551 CEST: %SEC_LOGIN-5-LOGIN_SUCCESS: Login Success [user: netadmin] [Source: 10.0.0.5] [localport: 22] at 10:15:40 CEST Wed Oct 7 2026
+<188>Oct  7 10:16:01 sw-core01 125: Oct  7 10:16:01.002 CEST: %SEC_LOGIN-4-LOGIN_FAILED: Login failed [user: admin] [Source: 198.51.100.7] [localport: 22] [Reason: Login Authentication Failed] at 10:16:01 CEST Wed Oct 7 2026
+<189>126: Oct  7 10:17:00.000: %SYS-5-CONFIG_I: Configured from console by netadmin on vty0 (10.0.0.5)

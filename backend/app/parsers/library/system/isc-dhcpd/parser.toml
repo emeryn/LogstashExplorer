@@ -1,0 +1,9 @@
+name = "ISC DHCP server (dhcpd)"
+vendor = "ISC DHCP / Kea-compatible syslog"
+description = """
+`dhcpd` syslog lines: DISCOVER, OFFER, REQUEST, ACK, NAK, RELEASE, INFORM and DECLINE with the leased address,
+client MAC, client host name and interface — the base for IP-to-host correlation.
+"""
+input_format = "lines"
+detect = ['dhcpd(?:\[\d+\])?: DHCP(?:DISCOVER|OFFER|REQUEST|ACK|NAK|RELEASE|INFORM|DECLINE) ']
+fields = ["event.action", "client.ip", "client.mac", "client.domain", "observer.ingress.interface.name", "server.ip"]

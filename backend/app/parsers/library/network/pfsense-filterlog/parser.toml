@@ -1,0 +1,9 @@
+name = "pfSense / OPNsense firewall (filterlog)"
+vendor = "Netgate pfSense, OPNsense"
+description = """
+`filterlog` CSV lines of pfSense and OPNsense (IPv4 and IPv6; TCP, UDP and others): rule number, interface,
+reason, action, direction, addresses, ports, length and TCP flags. A syslog header in front is accepted.
+"""
+input_format = "lines"
+detect = ['filterlog(?:\[\d+\])?: \d*,[^,]*,[^,]*,[^,]*,[^,]+,[^,]+,(?:pass|block|reject),(?:in|out),[46],']
+fields = ["rule.id", "observer.ingress.interface.name", "event.action", "event.type", "network.direction", "network.type", "network.transport", "source.ip", "destination.ip", "source.port", "destination.port", "pfsense.tcp_flags"]

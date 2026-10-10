@@ -1,0 +1,3 @@
+10/07-10:15:32.123456  [**] [1:2024217:3] ET POLICY Possible Kali Linux hostname in DHCP Request Packet [**] [Classification: Potential Corporate Privacy Violation] [Priority: 1] {UDP} 10.0.0.66:68 -> 255.255.255.255:67
+10/07-10:15:40.000001  [**] [1:2001219:20] ET SCAN Potential SSH Scan [**] [Classification: Attempted Information Leak] [Priority: 2] {TCP} 198.51.100.7:55012 -> 10.0.0.10:22
+10/07-10:16:00.500000 [**] [1:1000001:1] "PROTOCOL-ICMP large ping" [**] [Priority: 3] {ICMP} 198.51.100.9 -> 10.0.0.10

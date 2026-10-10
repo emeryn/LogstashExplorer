@@ -54,6 +54,12 @@ export default function Help({ user }: { user: User }) {
             format switches to “JSON lines”.
           </li>
           <li>
+            <strong>Raw auditd records</strong> (<code>audit.log</code>): “Convert with LAUREL” groups the records of each
+            event (SYSCALL, EXECVE, PATH…) into one JSON line with hex strings decoded, ready for the “Linux auditd via
+            LAUREL” parser. The process tree, user names and containers that LAUREL adds on the audited host are not
+            available here; the README explains the production setup.
+          </li>
+          <li>
             In JSON lines mode, fields are already decoded at the root of the event: no need to add a <code>json</code>{" "}
             filter.
           </li>
@@ -64,11 +70,12 @@ export default function Help({ user }: { user: User }) {
         <h2>Parser library</h2>
         <ul>
           <li>
-            Ready-made filters for the formats most seen in companies: Windows (Security, Sysmon, PowerShell, any EVTX
-            channel, NXLog), web servers and proxies (Apache/Nginx, IIS, Squid, HAProxy), network and security devices
-            (Cisco ASA, FortiGate, Palo Alto, Check Point, Stormshield, CEF, LEEF), Linux (syslog RFC 3164/5424,
-            auth.log, auditd), generic JSON / key=value / CSV, and industrial protocols (Zeek Modbus, DNP3, S7comm, OT
-            alerts in CEF).
+            88 ready-made filters for the formats most seen in companies: Windows (EVTX, NXLog, Snare including
+            Windows 2000 / XP / 2003, DNS, DHCP, firewall), cloud and SaaS audit logs (AWS, Google Cloud, Azure, Entra ID,
+            Microsoft 365, Okta, Cloudflare, Kubernetes), web servers and proxies, firewalls and network devices (Cisco,
+            Fortinet, Palo Alto, Check Point, Stormshield, Juniper, Sophos, SonicWall, pfSense, iptables…), IDS (Suricata,
+            Snort, Zeek, Wazuh), Linux and legacy Unix (Solaris, AIX, HP-UX su log, last), databases and applications,
+            and industrial protocols (Modbus, DNP3, S7comm, EtherNet/IP, BACnet, OT alerts).
           </li>
           <li>
             As soon as source logs are loaded, the format is detected: a banner offers the matching parser. The
@@ -79,6 +86,10 @@ export default function Help({ user }: { user: User }) {
             synthetic: check the result on your own logs and adapt the filter.
           </li>
           <li>The AI agent is given the matching parser as a starting point when it recognises your sample.</li>
+          <li>
+            Some parsers read metadata from the source file path (Kubernetes pod and namespace, Docker container ID):
+            “Use filter + sample” also fills the matching input fields.
+          </li>
         </ul>
       </section>
 

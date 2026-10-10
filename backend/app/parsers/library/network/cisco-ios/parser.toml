@@ -1,0 +1,10 @@
+name = "Cisco IOS / IOS-XE / NX-OS syslog"
+vendor = "Cisco"
+description = """
+Router and switch messages (`%FACILITY-SEVERITY-MNEMONIC: text`, with optional sequence number and device
+timestamp): facility, severity, mnemonic, interface state changes, login success / failure (user, source) and
+configuration changes.
+"""
+input_format = "lines"
+detect = ['%[A-Z][A-Z0-9_]*-[0-7]-[A-Z][A-Z0-9_]*: ']
+fields = ["cisco.ios.facility", "log.syslog.severity.code", "event.code", "message", "user.name", "source.ip", "event.outcome", "cisco.ios.interface", "event.action"]

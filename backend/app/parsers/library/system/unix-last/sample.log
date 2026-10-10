@@ -1,0 +1,7 @@
+alice    pts/0        10.0.0.5         Wed Oct  7 10:15 - 11:02  (00:47)
+bob      ssh:notty    198.51.100.7     Wed Oct  7 10:16 - 10:16  (00:00)
+root     console                       Wed Oct  7 09:00   still logged in
+oracle   pts/3        sol10-app        Tue Oct  6 22:10 - crash  (10:40)
+reboot   system boot  5.10             Wed Oct  7 08:55
+
+wtmp begins Thu Oct  1 00:00:01 2026

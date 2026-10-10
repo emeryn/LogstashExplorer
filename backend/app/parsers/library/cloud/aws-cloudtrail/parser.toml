@@ -1,0 +1,11 @@
+name = "AWS CloudTrail"
+vendor = "Amazon Web Services"
+description = """
+CloudTrail records (one JSON object per line, e.g. the `Records` array split by the shipper): who did what, from
+where, with which outcome. Vendor fields are kept under `aws.cloudtrail`; identity, action, source address, user
+agent, region, account and error are mapped to ECS. Non-IP source addresses (AWS service names) stay in
+`aws.cloudtrail.sourceIPAddress`.
+"""
+input_format = "json"
+detect = ['"eventSource"\s*:\s*"[\w.-]+\.amazonaws\.com"', '"eventVersion"\s*:\s*"1\.\d+"']
+fields = ["event.action", "event.provider", "event.outcome", "cloud.region", "cloud.account.id", "source.ip", "user.name", "user.id", "user_agent.original", "error.code", "aws.cloudtrail.userIdentity"]

@@ -1,0 +1,10 @@
+name = "Envoy / Istio access log (default format)"
+vendor = "Envoy Proxy, Istio, Contour"
+description = """
+Envoy access log in the default text format: start time, request line, status, response flags, bytes, duration,
+upstream service time, X-Forwarded-For, user agent, request ID, authority and upstream host (extra Istio fields are
+kept in `envoy.extra`).
+"""
+input_format = "lines"
+detect = ['^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] "[A-Z]+ \S+ \S+" \d{3} \S+ \d+ \d+ \d+ \S+ "']
+fields = ["http.request.method", "url.original", "http.response.status_code", "envoy.response_flags", "http.request.body.bytes", "http.response.body.bytes", "envoy.duration_ms", "source.ip", "user_agent.original", "http.request.id", "url.domain", "envoy.upstream_host"]

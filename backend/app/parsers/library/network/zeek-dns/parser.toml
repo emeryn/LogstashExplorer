@@ -1,0 +1,8 @@
+name = "Zeek DNS log (dns.log)"
+vendor = "Zeek (Bro)"
+description = """
+Zeek `dns.log` in JSON: client / resolver, query name, class, type, response code, flags, answers and TTLs.
+"""
+input_format = "json"
+detect = ['"qtype_name"\s*:\s*"[A-Z0-9*]+"', '"rcode_name"\s*:\s*"[A-Z]+"']
+fields = ["source.ip", "destination.ip", "dns.question.name", "dns.question.type", "dns.response_code", "dns.id", "zeek.dns.rtt", "network.transport"]

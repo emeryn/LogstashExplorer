@@ -1,0 +1,10 @@
+name = "Windows DHCP Server audit log"
+vendor = "Microsoft"
+description = """
+Windows DHCP Server audit log (`DhcpSrvLog-*.log`, CSV): event ID mapped to an action (assign, renew, release,
+conflict, DNS update…), leased IP, host name, MAC address, user, vendor class. Header lines are dropped.
+"""
+input_format = "lines"
+detect = ['^\d{2},\d{2}/\d{2}/\d{2},\d{2}:\d{2}:\d{2},[^,]*,[\d.]*,[^,]*,[0-9A-Fa-f]*,']
+fields = ["event.code", "event.action", "client.ip", "client.domain", "client.mac", "windows.dhcp.description", "windows.dhcp.vendor_class"]
+expected_events = 4

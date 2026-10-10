@@ -1,0 +1,9 @@
+name = "Zeek TLS log (ssl.log)"
+vendor = "Zeek (Bro)"
+description = """
+Zeek `ssl.log` in JSON: TLS version, cipher, curve, server name (SNI), resumption, establishment, certificate
+subject / issuer, validation status and JA3 / JA3S fingerprints when the package is loaded.
+"""
+input_format = "json"
+detect = ['"server_name"\s*:\s*"[^"]*".*"established"\s*:', '"cipher"\s*:\s*"TLS_[A-Z0-9_]+"']
+fields = ["source.ip", "destination.ip", "tls.version", "tls.cipher", "tls.client.server_name", "tls.established", "tls.server.subject", "tls.server.issuer", "zeek.ssl.validation_status"]

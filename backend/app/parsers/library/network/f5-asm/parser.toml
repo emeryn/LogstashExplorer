@@ -1,0 +1,10 @@
+name = "F5 BIG-IP ASM / Advanced WAF (key-value)"
+vendor = "F5"
+description = """
+F5 BIG-IP ASM / Advanced WAF remote logging in the default key="value" format (`ASM:unit_hostname="…",…`):
+policy, request status, violations and attack type, signatures, support ID, client and server addresses, method,
+URI and severity.
+"""
+input_format = "lines"
+detect = ['ASM:unit_hostname="[^"]*",management_ip_address="']
+fields = ["observer.hostname", "rule.ruleset", "event.action", "f5.asm.violations", "f5.asm.attack_type", "event.id", "source.ip", "source.port", "destination.ip", "destination.port", "http.request.method", "url.path", "log.level"]
