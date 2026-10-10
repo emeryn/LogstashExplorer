@@ -13,7 +13,11 @@ class RunnerError(RuntimeError):
 
 
 async def run_pipeline(
-    config: str, input_data: str, input_format: str = "lines", ecs_compatibility: str = "disabled"
+    config: str,
+    input_data: str,
+    input_format: str = "lines",
+    ecs_compatibility: str = "disabled",
+    input_fields: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     s = get_settings()
     try:
@@ -26,6 +30,7 @@ async def run_pipeline(
                     "input_format": input_format,
                     "ecs_compatibility": ecs_compatibility,
                     "timeout": s.runner_timeout_s,
+                    "fields": input_fields or None,
                 },
                 headers={"Authorization": f"Bearer {require_secret('runner_token')}"},
             )

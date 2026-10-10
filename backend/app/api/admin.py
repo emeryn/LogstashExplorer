@@ -27,7 +27,17 @@ from app.core import syslog
 from app.core.config import get_settings
 from app.core.deps import Principal, require_role
 from app.core.security import hash_password
-from app.db.models import AuditLog, AuthSource, GroupMapping, Role, User, UserStatus, WebAuthnCredential
+from app.db.models import (
+    ApiToken,
+    AuditLog,
+    AuthSource,
+    GroupMapping,
+    Role,
+    User,
+    UserStatus,
+    WebAuthnCredential,
+    utcnow,
+)
 from app.db.session import get_db
 from app.services.audit import audit
 from app.services.llm import LLMError, chat, list_models, load_llm_config
@@ -235,14 +245,14 @@ async def user_token_create(
     user = await _get_user(db, user_id)
     if user.auth_source != AuthSource.SERVICE:
         raise HTTPException(400, "Tokens can be issued here only for service accounts")
-    token, raw = await create_token(db, user.id, body.name, body.expires_in_days)
+    token, raw = await create_token(db, user.id, body.name, body.expires_in_days, body.scope)
     await audit(
         db,
         "token.create",
         request=request,
         actor=principal.user,
         target=f"{user.username}:{token.name}",
-        details={"expires_at": token.expires_at.isoformat()},
+        details={"expires_at": token.expires_at.isoformat(), "scope": token.scope},
     )
     await db.commit()
     return {**token_out(token), "token": raw}
@@ -264,6 +274,37 @@ async def user_token_revoke(
     return {"ok": True}
 
 
+# ---- Every account's API tokens (MCP clients, scripts) ---------------------------------------
+@router.get("/tokens")
+async def all_tokens(_: Principal = Depends(admin_only), db: AsyncSession = Depends(get_db)) -> list[dict]:
+    """Active (not revoked, not expired) tokens of every account, most recently used first."""
+    rows = await db.execute(
+        select(ApiToken, User.username, User.auth_source)
+        .join(User, User.id == ApiToken.user_id)
+        .where(ApiToken.revoked_at.is_(None), ApiToken.expires_at > utcnow())
+        .order_by(ApiToken.last_used_at.desc().nulls_last(), ApiToken.created_at.desc())
+    )
+    return [{**token_out(t), "username": u, "auth_source": src.value} for t, u, src in rows]
+
+
+@router.delete("/tokens/{token_id}")
+async def any_token_revoke(
+    token_id: uuid.UUID,
+    request: Request,
+    principal: Principal = Depends(admin_only),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    token = await db.get(ApiToken, token_id)
+    if token is None:
+        raise HTTPException(404, "Not found")
+    owner = await db.get(User, token.user_id)
+    token = await revoke_token(db, token.user_id, token_id)
+    await audit(db, "token.revoke", request=request, actor=principal.user,
+                target=f"{owner.username if owner else '?'}:{token.name}", details={"by": "admin"})  # fmt: skip
+    await db.commit()
+    return {"ok": True}
+
+
 # ---- Runtime settings ------------------------------------------------------------------------
 class LoggingSettings(BaseModel):
     masking_enabled: bool
@@ -275,7 +316,11 @@ class ProvisioningSettings(BaseModel):
     default_role: Role
 
 
-SETTINGS_MODELS = {"logging": LoggingSettings, "provisioning": ProvisioningSettings}
+class McpSettings(BaseModel):
+    enabled: bool
+
+
+SETTINGS_MODELS = {"logging": LoggingSettings, "provisioning": ProvisioningSettings, "mcp": McpSettings}
 
 
 @router.get("/settings")
@@ -284,8 +329,6 @@ async def settings_get(_: Principal = Depends(admin_only), db: AsyncSession = De
     return {
         **{k: await get_setting(db, k) for k in SETTINGS_MODELS},
         "system": {
-            "oidc_enabled": s.oidc_enabled,
-            "ldap_enabled": s.ldap_enabled,
             "secrets_backend": s.secrets_backend,
             "session_idle_minutes": s.session_idle_minutes,
             "lockout_threshold": s.lockout_threshold,

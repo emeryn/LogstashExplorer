@@ -117,6 +117,7 @@ class ApiToken(Base):
     name: Mapped[str] = mapped_column(String(128))
     prefix: Mapped[str] = mapped_column(String(16))
     fingerprint: Mapped[str] = mapped_column(String(64), unique=True)  # SHA3-256
+    scope: Mapped[str] = mapped_column(String(16), default="write")  # "read" (read-only) or "write"
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -206,6 +207,8 @@ class Pipeline(Base):
     input_format: Mapped[str] = mapped_column(String(16), default="lines")
     instructions: Mapped[str | None] = mapped_column(EncryptedText("pipeline.instructions"), nullable=True)
     expected_output: Mapped[str | None] = mapped_column(EncryptedText("pipeline.expected"), nullable=True)
+    # JSON object of simulated input fields (see app.core.input_fields).
+    input_fields: Mapped[str | None] = mapped_column(EncryptedText("pipeline.input_fields"), nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     updated_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

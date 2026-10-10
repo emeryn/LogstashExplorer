@@ -1,0 +1,10 @@
+name = "Key=value pairs"
+vendor = "Generic"
+description = """
+Lines made of `key=value` pairs (quoted values allowed), as written by many appliances and scripts. Keys are
+stored under `kv`; adapt the `target` and the separators to your source.
+"""
+input_format = "lines"
+priority = -2  # generic: specific parsers win score ties
+detect = ['^(?:<\d{1,3}>)?(?:[\w.-]+=(?:"[^"]*"|\S+)\s+){3,}']
+fields = ["kv"]

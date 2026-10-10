@@ -1,0 +1,11 @@
+name = "Syslog (RFC 5424)"
+vendor = "rsyslog, syslog-ng, appliances"
+description = """
+IETF syslog: `<PRI>1 timestamp host app procid msgid [structured-data] message`. Decodes facility and
+severity, keeps every header field and flattens structured-data parameters under
+`log.syslog.structured_data`.
+"""
+input_format = "lines"
+detect = ['^<\d{1,3}>1 (?:-|\d{4}-\d{2}-\d{2}T\S+) \S+ \S+ \S+ \S+ (?:-|\[)']
+fields = ["host.hostname", "log.syslog.appname", "log.syslog.procid", "log.syslog.msgid",
+          "log.syslog.facility.name", "log.syslog.severity.name", "log.syslog.structured_data", "message"]

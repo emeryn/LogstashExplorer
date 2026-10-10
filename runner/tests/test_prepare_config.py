@@ -52,3 +52,37 @@ def test_rejections(conf, needle):
     with pytest.raises(ConfigError) as exc:
         prepare_config(conf)
     assert needle in str(exc.value)
+
+
+def test_hash_inside_field_reference_is_not_a_comment():
+    conf = 'filter {\n  if [Event][System][EventID][#text] {\n    mutate { add_tag => ["x"] }\n  }\n}\n'
+    prepared, plugins, _, _ = prepare_config(conf)
+    assert plugins == ["mutate"] and "[#text]" in prepared
+
+
+def test_input_fields_are_injected_in_the_harness():
+    from runner import _harness, check_input_fields
+
+    path = "/var/log/apache2/srv-web01/access.log"
+    fields = check_input_fields({"[log][file][path]": path, "env": r"C:\logs\app"})
+    harness = _harness("lines", Path("/tmp/out.jsonl"), fields)
+    assert f'add_field => {{ "[log][file][path]" => "{path}" "env" => "C:\\logs\\app" }}' in harness
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"[log][file][path]": 'a" } } output { exec { command => "id'},
+        {"a b": "x"},
+        {"x": "line1\nline2"},
+        {"x": "ends with backslash\\"},
+        {"x": "%{[@metadata][secret]}"},
+        {f"f{i}": "v" for i in range(21)},
+        ["not", "a", "dict"],
+    ],
+)
+def test_input_fields_rejections(fields):
+    from runner import check_input_fields
+
+    with pytest.raises(ConfigError):
+        check_input_fields(fields)

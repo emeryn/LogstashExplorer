@@ -1,0 +1,4 @@
+{"ts":1791375332.123456,"uid":"CHhAvVGS1DHFjwGM9","id.orig_h":"10.10.1.20","id.orig_p":50234,"id.resp_h":"10.10.1.5","id.resp_p":502,"func":"READ_HOLDING_REGISTERS"}
+{"ts":1791375333.2001,"uid":"CHhAvVGS1DHFjwGM9","id.orig_h":"10.10.1.20","id.orig_p":50234,"id.resp_h":"10.10.1.5","id.resp_p":502,"func":"WRITE_SINGLE_REGISTER"}
+{"ts":1791375334.5,"uid":"C4J4Th3PJpwUYZZ6gc","id.orig_h":"10.10.9.66","id.orig_p":41022,"id.resp_h":"10.10.1.5","id.resp_p":502,"func":"WRITE_MULTIPLE_COILS","exception":"ILLEGAL_DATA_ADDRESS"}
+{"ts":"2026-10-07T08:15:40.000000Z","uid":"Cq9fCm1RZRqJ0QmTq2","id":{"orig_h":"10.10.1.21","orig_p":50300,"resp_h":"10.10.1.6","resp_p":502},"func":"READ_INPUT_REGISTERS"}

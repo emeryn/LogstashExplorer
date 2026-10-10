@@ -1,0 +1,10 @@
+name = "Zeek Modbus log (modbus.log)"
+input_format = "json"
+vendor = "Zeek (OT/ICS network monitoring)"
+description = """
+Zeek `modbus.log` in JSON (one object per line): connection 4-tuple, Modbus function and exception. Write
+functions are tagged `ot_critical_operation` with `event.type: change`. Also accepts the nested `id` layout.
+"""
+detect = ['"func"\s*:\s*"(?:READ|WRITE|DIAGNOSTICS|MASK_WRITE|READ_WRITE)_', '"resp_p"\s*:\s*502\b']
+fields = ["source.ip", "source.port", "destination.ip", "destination.port", "network.protocol", "zeek.session_id",
+          "zeek.modbus.function", "zeek.modbus.exception", "event.type", "tags"]

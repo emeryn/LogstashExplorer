@@ -11,7 +11,9 @@ from app.core.security import fingerprint, new_token
 from app.db.models import ApiToken, utcnow
 
 
-async def create_token(db: AsyncSession, user_id: uuid.UUID, name: str, expires_in_days: int) -> tuple[ApiToken, str]:
+async def create_token(
+    db: AsyncSession, user_id: uuid.UUID, name: str, expires_in_days: int, scope: str = "write"
+) -> tuple[ApiToken, str]:
     days = max(1, min(expires_in_days, get_settings().api_token_max_days))
     prefix = new_token(6)[:8]
     raw = f"lsx_{prefix}_{new_token(32)}"
@@ -20,6 +22,7 @@ async def create_token(db: AsyncSession, user_id: uuid.UUID, name: str, expires_
         name=name[:128],
         prefix=prefix,
         fingerprint=fingerprint(raw),
+        scope=scope,
         expires_at=utcnow() + timedelta(days=days),
     )
     db.add(token)
@@ -39,6 +42,7 @@ def token_out(t: ApiToken) -> dict:
         "id": str(t.id),
         "name": t.name,
         "prefix": t.prefix,
+        "scope": t.scope,
         "created_at": t.created_at,
         "expires_at": t.expires_at,
         "revoked_at": t.revoked_at,

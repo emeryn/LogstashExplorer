@@ -13,9 +13,9 @@ import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
-from app.core.secrets import get_secret
 from app.core.security import fingerprint, tls_context
 from app.db.models import AuthFlow, AuthSource, utcnow
+from app.services.directory import OidcConfig
 from app.services.provisioning import ExternalIdentity
 
 _discovery_cache: dict[str, tuple[float, dict]] = {}
@@ -32,24 +32,41 @@ def redirect_uri() -> str:
     return get_settings().public_url.rstrip("/") + "/api/auth/oidc/callback"
 
 
-async def discovery() -> dict:
-    issuer = get_settings().oidc_issuer.rstrip("/")
-    cached = _discovery_cache.get(issuer)
-    if cached and cached[0] > time.time():
+def clear_discovery_cache() -> None:
+    _discovery_cache.clear()
+
+
+async def discovery(cfg: OidcConfig, *, use_cache: bool = True) -> dict:
+    cached = _discovery_cache.get(cfg.issuer)
+    if use_cache and cached and cached[0] > time.time():
         return cached[1]
     async with httpx.AsyncClient(verify=tls_context(), timeout=10) as client:
-        resp = await client.get(f"{issuer}/.well-known/openid-configuration")
+        resp = await client.get(f"{cfg.issuer}/.well-known/openid-configuration")
         resp.raise_for_status()
         doc = resp.json()
-    if doc.get("issuer", "").rstrip("/") != issuer:
+    if doc.get("issuer", "").rstrip("/") != cfg.issuer:
         raise ValueError("OIDC issuer mismatch")
-    _discovery_cache[issuer] = (time.time() + 3600, doc)
+    _discovery_cache[cfg.issuer] = (time.time() + 3600, doc)
     return doc
 
 
-async def build_authorization_url(db: AsyncSession, next_path: str | None) -> str:
-    s = get_settings()
-    doc = await discovery()
+async def check(cfg: OidcConfig) -> dict:
+    """Admin connection test: discovery document and its key endpoints (no secret is sent)."""
+    doc = await discovery(cfg, use_cache=False)
+    missing = [k for k in ("authorization_endpoint", "token_endpoint", "jwks_uri") if not doc.get(k)]
+    if missing:
+        raise ValueError(f"discovery document lacks {', '.join(missing)}")
+    return {
+        "issuer": doc["issuer"],
+        "authorization_endpoint": doc["authorization_endpoint"],
+        "token_endpoint": doc["token_endpoint"],
+        "pkce_s256": "S256" in doc.get("code_challenge_methods_supported", ["S256"]),
+        "scopes_supported": doc.get("scopes_supported", []),
+    }
+
+
+async def build_authorization_url(db: AsyncSession, cfg: OidcConfig, next_path: str | None) -> str:
+    doc = await discovery(cfg)
     state = secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(32)
     verifier = secrets.token_urlsafe(64)
@@ -65,9 +82,9 @@ async def build_authorization_url(db: AsyncSession, next_path: str | None) -> st
     await db.flush()
     params = {
         "response_type": "code",
-        "client_id": s.oidc_client_id,
+        "client_id": cfg.client_id,
         "redirect_uri": redirect_uri(),
-        "scope": s.oidc_scopes,
+        "scope": cfg.scopes,
         "state": state,
         "nonce": nonce,
         "code_challenge": challenge,
@@ -76,8 +93,7 @@ async def build_authorization_url(db: AsyncSession, next_path: str | None) -> st
     return f"{doc['authorization_endpoint']}?{urlencode(params)}"
 
 
-async def handle_callback(db: AsyncSession, code: str, state: str) -> tuple[ExternalIdentity, str]:
-    s = get_settings()
+async def handle_callback(db: AsyncSession, cfg: OidcConfig, code: str, state: str) -> tuple[ExternalIdentity, str]:
     flow = await db.get(AuthFlow, fingerprint(state))
     if flow is None or flow.kind != "oidc":
         raise ValueError("unknown or replayed state")
@@ -87,7 +103,7 @@ async def handle_callback(db: AsyncSession, code: str, state: str) -> tuple[Exte
         raise ValueError("expired state")
     data = json.loads(flow.data)
 
-    doc = await discovery()
+    doc = await discovery(cfg)
     async with httpx.AsyncClient(verify=tls_context(), timeout=15) as client:
         resp = await client.post(
             doc["token_endpoint"],
@@ -96,9 +112,9 @@ async def handle_callback(db: AsyncSession, code: str, state: str) -> tuple[Exte
                 "code": code,
                 "redirect_uri": redirect_uri(),
                 "code_verifier": data["verifier"],
-                "client_id": s.oidc_client_id,
+                "client_id": cfg.client_id,
             },
-            auth=(s.oidc_client_id, get_secret("oidc_client_secret") or ""),
+            auth=(cfg.client_id, cfg.client_secret),
         )
         resp.raise_for_status()
         tokens = resp.json()
@@ -110,14 +126,14 @@ async def handle_callback(db: AsyncSession, code: str, state: str) -> tuple[Exte
         id_token,
         signing_key.key,
         algorithms=["RS256", "PS256", "ES256", "EdDSA"],
-        audience=s.oidc_client_id,
+        audience=cfg.client_id,
         issuer=doc["issuer"],
         options={"require": ["exp", "iat", "iss", "aud", "sub", "nonce"]},
     )
     if not secrets.compare_digest(claims["nonce"], data["nonce"]):
         raise ValueError("nonce mismatch")
 
-    groups = claims.get(s.oidc_groups_claim) or []
+    groups = claims.get(cfg.groups_claim) or []
     if isinstance(groups, str):
         groups = [groups]
     ident = ExternalIdentity(

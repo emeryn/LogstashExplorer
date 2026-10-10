@@ -1,0 +1,10 @@
+name = "Zeek DNP3 log (dnp3.log)"
+input_format = "json"
+vendor = "Zeek (OT/ICS network monitoring)"
+description = """
+Zeek `dnp3.log` in JSON: connection 4-tuple, request / reply function codes and internal indications (IIN).
+Control and restart functions (OPERATE, DIRECT_OPERATE, COLD_RESTART…) are tagged `ot_critical_operation`.
+"""
+detect = ['"fc_request"\s*:\s*"', '"resp_p"\s*:\s*20000\b']
+fields = ["source.ip", "destination.ip", "destination.port", "network.protocol", "zeek.dnp3.function_request",
+          "zeek.dnp3.function_reply", "zeek.dnp3.iin", "tags"]

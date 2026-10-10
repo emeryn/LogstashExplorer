@@ -1,0 +1,13 @@
+name = "Sysmon (EVTX)"
+vendor = "Microsoft Sysinternals"
+description = """
+Microsoft-Windows-Sysmon/Operational events converted from `.evtx`: process creation / access, network
+connections, DNS queries, file and registry activity. Maps processes (with parent and hashes), user, network,
+DNS, file and registry fields to ECS and names the action after the Sysmon event ID.
+"""
+input_format = "json"
+detect = ['"Name"\s*:\s*"Microsoft-Windows-Sysmon"']
+fields = ["event.code", "event.action", "host.name", "process.executable", "process.name", "process.pid",
+          "process.command_line", "process.entity_id", "process.parent.executable", "process.hash.sha256",
+          "user.name", "user.domain", "source.ip", "destination.ip", "destination.port", "destination.domain",
+          "network.transport", "dns.question.name", "file.path", "registry.path", "rule.name"]

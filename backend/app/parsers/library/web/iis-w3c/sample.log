@@ -1,0 +1,7 @@
+#Software: Microsoft Internet Information Services 10.0
+#Version: 1.0
+#Date: 2026-10-07 08:15:00
+#Fields: date time s-ip cs-method cs-uri-stem cs-uri-query s-port cs-username c-ip cs(User-Agent) cs(Referer) sc-status sc-substatus sc-win32-status time-taken
+2026-10-07 08:15:32 10.0.0.10 GET /default.aspx - 443 - 203.0.113.42 Mozilla/5.0+(Windows+NT+10.0;+Win64;+x64) https://example.org/ 200 0 0 46
+2026-10-07 08:15:40 10.0.0.10 POST /owa/auth.owa - 443 CORP\alice 10.0.0.5 Mozilla/5.0+(Windows+NT+10.0) - 302 0 0 131
+2026-10-07 08:16:02 10.0.0.10 GET /aspnet_client/system_web/shell.aspx cmd=whoami 443 - 198.51.100.7 python-requests/2.32.3 - 404 0 2 15

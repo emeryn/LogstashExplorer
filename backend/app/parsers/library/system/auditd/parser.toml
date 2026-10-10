@@ -1,0 +1,10 @@
+name = "Linux auditd"
+vendor = "Linux audit framework"
+description = """
+`/var/log/audit/audit.log` records (`type=… msg=audit(epoch:serial): key=value …`), including the nested
+`msg='…'` of USER_* records. Maps process, user and outcome fields to ECS; all raw fields stay under `auditd.log`.
+"""
+input_format = "lines"
+detect = ['^type=[A-Z_]+ msg=audit\(\d+\.\d+:\d+\): ']
+fields = ["auditd.log.record_type", "auditd.log.sequence", "process.pid", "process.executable", "process.name",
+          "user.id", "user.audit.id", "event.outcome", "auditd.log.key", "source.ip"]

@@ -1,0 +1,11 @@
+name = "Zeek S7comm log (ICSNPP s7comm.log)"
+input_format = "json"
+vendor = "Zeek + CISA ICSNPP (Siemens S7)"
+description = """
+`s7comm.log` produced by the CISA ICSNPP S7comm Zeek plugin, in JSON: connection, ROSCTR, PDU reference,
+function / sub-function and error codes. Program download, PLC stop / control, writes and block deletion are
+tagged `ot_critical_operation`.
+"""
+detect = ['"rosctr_name"\s*:\s*"', '"resp_p"\s*:\s*102\b']
+fields = ["source.ip", "destination.ip", "destination.port", "network.protocol", "zeek.s7comm.rosctr",
+          "zeek.s7comm.function", "zeek.s7comm.function_code", "zeek.s7comm.pdu_reference", "tags"]

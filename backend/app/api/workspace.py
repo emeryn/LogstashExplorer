@@ -13,6 +13,7 @@ from starlette.background import BackgroundTask
 
 from app.core.config import get_settings
 from app.core.deps import Principal, require_role
+from app.core.input_fields import InputFields
 from app.db.models import Role
 from app.db.session import get_db, sessionmaker
 from app.services.agent import run_agent
@@ -35,6 +36,7 @@ class RunIn(BaseModel):
     config: str = Field(max_length=MAX_CONFIG)
     input: str = Field(max_length=MAX_INPUT)
     input_format: Literal["lines", "json"] = "lines"
+    input_fields: InputFields = None
 
 
 @router.post("/pipeline/run")
@@ -44,7 +46,7 @@ async def pipeline_run(
     ecs = (await get_setting(db, "ai"))["ecs_compatibility"]
     async with user_run_slot(principal.user.id):
         try:
-            result = await run_pipeline(body.config, body.input, body.input_format, ecs)
+            result = await run_pipeline(body.config, body.input, body.input_format, ecs, body.input_fields)
         except RunnerError as exc:
             raise HTTPException(503, str(exc)) from exc
     log.info(
@@ -94,6 +96,13 @@ class AgentIn(BaseModel):
     expected_output: str | None = Field(default=None, max_length=200_000)
     initial_config: str | None = Field(default=None, max_length=MAX_CONFIG)
     max_iterations: int | None = Field(default=None, ge=1, le=20)
+    input_fields: InputFields = None
+
+
+@router.get("/workspace/settings")
+async def workspace_settings(_: Principal = Depends(any_user), db: AsyncSession = Depends(get_db)) -> dict:
+    """What the editor needs to mimic the pipeline: ECS mode decides e.g. path vs [log][file][path]."""
+    return {"ecs_compatibility": (await get_setting(db, "ai"))["ecs_compatibility"]}
 
 
 @router.post("/agent/run")
@@ -125,6 +134,7 @@ async def agent_run(
                     expected_raw=body.expected_output,
                     initial_config=body.initial_config,
                     max_iterations=max_iter,
+                    input_fields=body.input_fields,
                 ):
                     yield json.dumps(event, default=str, ensure_ascii=False) + "\n"
         except Exception:  # noqa: BLE001

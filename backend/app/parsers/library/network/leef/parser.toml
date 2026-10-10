@@ -1,0 +1,11 @@
+name = "LEEF (IBM QRadar Log Event Extended Format)"
+vendor = "Any LEEF source"
+description = """
+`LEEF:1.0|Vendor|Product|Version|EventID|` followed by tab-separated `key=value` attributes, or LEEF 2.0 with
+an explicit delimiter (`^`, `|`, tab or hex such as `x09`). Common attributes are mapped to ECS; all of them
+stay under `leef.attributes`.
+"""
+input_format = "lines"
+detect = ['LEEF:[12]\.0\|[^|]*\|[^|]*\|[^|]*\|[^|]*\|']
+fields = ["observer.vendor", "observer.product", "event.code", "source.ip", "destination.ip", "destination.port",
+          "user.name", "leef.attributes"]

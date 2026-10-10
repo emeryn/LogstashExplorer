@@ -1,0 +1,4 @@
+type=SYSCALL msg=audit(1791375332.123:4567): arch=c000003e syscall=59 success=yes exit=0 a0=55d0c1 a1=55d0c2 a2=55d0c3 a3=0 items=2 ppid=2211 pid=2290 auid=1000 uid=0 gid=0 euid=0 suid=0 fsuid=0 egid=0 sgid=0 fsgid=0 tty=pts0 ses=3 comm="bash" exe="/usr/bin/bash" subj=unconfined key="exec"
+type=EXECVE msg=audit(1791375332.123:4567): argc=3 a0="bash" a1="-c" a2="id"
+type=USER_LOGIN msg=audit(1791375340.501:4570): pid=2240 uid=0 auid=4294967295 ses=4294967295 subj=unconfined msg='op=login acct="oracle" exe="/usr/sbin/sshd" hostname=? addr=198.51.100.7 terminal=sshd res=failed'
+type=USER_CMD msg=audit(1791375361.020:4580): pid=3001 uid=1000 auid=1000 ses=3 subj=unconfined msg='cwd="/home/alice" cmd=73797374656D63746C exe="/usr/bin/sudo" terminal=pts/0 res=success'

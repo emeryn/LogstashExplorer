@@ -47,6 +47,10 @@ FORBIDDEN_OPTIONS = re.compile(
     r"aggregate_maps_path|path|template|cache_path)\s*=>"
 )
 KEYWORDS = {"if", "else"}
+FIELD_REF_ELEMENT = re.compile(r"\[[^\[\]\n,\"']+\]")
+# Input fields simulate what a real input adds to each event (e.g. the file input's [log][file][path]).
+INPUT_FIELD_NAME = re.compile(r"^(?:\[[A-Za-z0-9_@.-]{1,64}\]){1,6}$|^[A-Za-z0-9_@.-]{1,64}$")
+MAX_INPUT_FIELDS = 20
 
 log = logging.getLogger("runner")
 _slots = threading.BoundedSemaphore(CONCURRENCY)
@@ -83,6 +87,12 @@ def _mask(text: str) -> str:
     last_sig = ""
     while i < n:
         c = text[i]
+        if c == "[":
+            # Field reference element such as `[#text]` (EVTX JSON): its "#" does not start a comment.
+            m = FIELD_REF_ELEMENT.match(text, i)
+            if m:
+                i, last_sig = m.end(), "]"
+                continue
         if c == "#":
             j = text.find("\n", i)
             j = n if j == -1 else j
@@ -262,10 +272,35 @@ ANSI = re.compile(r"\x1b\[[0-9;]*m")
 BACKTRACE = re.compile(r",\s*backtrace:\s*\[.*$")
 
 
-def _harness(input_format: str, out_file: Path) -> str:
+def check_input_fields(fields: object) -> dict[str, str]:
+    """Validate the simulated input fields: plain field references and literal values only (no quotes,
+    newlines, trailing backslash or %{} interpolation), so they can be embedded in the harness safely."""
+    if fields is None:
+        return {}
+    if not isinstance(fields, dict) or len(fields) > MAX_INPUT_FIELDS:
+        raise ConfigError(f"input fields: at most {MAX_INPUT_FIELDS} name/value pairs")
+    for name, value in fields.items():
+        if not isinstance(name, str) or not INPUT_FIELD_NAME.match(name):
+            raise ConfigError(f"input fields: invalid field name {str(name)[:80]!r} (e.g. [log][file][path])")
+        if (
+            not isinstance(value, str)
+            or len(value) > 2048
+            or any(c in value for c in '"\r\n')
+            or value.endswith("\\")
+            or "%{" in value
+        ):
+            raise ConfigError(f"input fields: invalid value for {name} (no quotes, newlines or %{{}}, max 2048 chars)")
+    return fields
+
+
+def _harness(input_format: str, out_file: Path, fields: dict[str, str] | None = None) -> str:
     codec = "json" if input_format == "json" else 'line { charset => "UTF-8" }'
+    add_field = ""
+    if fields:
+        pairs = " ".join(f'"{name}" => "{value}"' for name, value in fields.items())
+        add_field = f" add_field => {{ {pairs} }}"
     return (
-        f"\ninput {{ stdin {{ codec => {codec} }} }}\n"
+        f"\ninput {{ stdin {{ codec => {codec}{add_field} }} }}\n"
         f'output {{ file {{ path => "{out_file}" codec => json_lines }} }}\n'
     )
 
@@ -287,10 +322,13 @@ def _settings_dir(work: Path, ecs: str) -> Path:
     return settings
 
 
-def run(config: str, input_data: str, input_format: str, ecs: str, timeout: int) -> dict:
+def run(
+    config: str, input_data: str, input_format: str, ecs: str, timeout: int, fields: dict[str, str] | None = None
+) -> dict:
     started = time.monotonic()
     capture = syslog_check.SyslogCapture()
     try:
+        fields = check_input_fields(fields)
         prepared, plugins, warnings, syslog_outputs = prepare_config(config, capture.tcp_port, capture.udp_port)
     except ConfigError as exc:
         capture.close()
@@ -298,7 +336,7 @@ def run(config: str, input_data: str, input_format: str, ecs: str, timeout: int)
                 "warnings": [], "plugins": [], "syslog": None, "duration_ms": 0}  # fmt: skip
 
     try:
-        result = _execute(prepared, input_data, input_format, ecs, timeout)
+        result = _execute(prepared, input_data, input_format, ecs, timeout, fields)
     finally:
         frames = capture.close()
     result.update(
@@ -310,12 +348,14 @@ def run(config: str, input_data: str, input_format: str, ecs: str, timeout: int)
     return result
 
 
-def _execute(prepared: str, input_data: str, input_format: str, ecs: str, timeout: int) -> dict:
+def _execute(
+    prepared: str, input_data: str, input_format: str, ecs: str, timeout: int, fields: dict[str, str] | None = None
+) -> dict:
     with tempfile.TemporaryDirectory(prefix="ls-") as tmp:  # TMPDIR = private tmpfs
         work = Path(tmp)
         out_file = work / "out.jsonl"
         conf_file = work / "pipeline.conf"
-        conf_file.write_text(prepared + _harness(input_format, out_file), encoding="utf-8")
+        conf_file.write_text(prepared + _harness(input_format, out_file, fields), encoding="utf-8")
         settings = _settings_dir(work, ecs)
         env = {
             "PATH": "/usr/bin:/bin",
@@ -350,7 +390,7 @@ def _execute(prepared: str, input_data: str, input_format: str, ecs: str, timeou
             logs_raw, _ = proc.communicate()
 
         logs = ANSI.sub("", logs_raw.decode("utf-8", errors="replace"))
-        events, parse_errors = [], 0
+        events = []
         if out_file.exists():
             with out_file.open("rb") as fh:
                 for raw in fh.read(MAX_OUTPUT_BYTES).splitlines():
@@ -359,7 +399,7 @@ def _execute(prepared: str, input_data: str, input_format: str, ecs: str, timeou
                     try:
                         events.append(json.loads(raw))
                     except ValueError:
-                        parse_errors += 1
+                        continue  # truncated last line (output size cap or killed run)
 
     errors = [
         BACKTRACE.sub("}", ln.strip()).replace("\\n", "\n").replace('\\"', '"')
@@ -418,6 +458,7 @@ class Handler(BaseHTTPRequestHandler):
             input_format = req.get("input_format", "lines")
             ecs = req.get("ecs_compatibility", "disabled")
             timeout = min(int(req.get("timeout", 120)), MAX_TIMEOUT)
+            fields = req.get("fields")
             if input_format not in ("lines", "json") or ecs not in ("disabled", "v1", "v8"):
                 raise ValueError
         except ValueError, KeyError, TypeError:
@@ -425,7 +466,7 @@ class Handler(BaseHTTPRequestHandler):
         if not _slots.acquire(timeout=120):
             return self._send(HTTPStatus.TOO_MANY_REQUESTS, {"detail": "busy"})
         try:
-            result = run(config, input_data, input_format, ecs, timeout)
+            result = run(config, input_data, input_format, ecs, timeout, fields)
         except Exception:  # noqa: BLE001
             log.exception("run failed")
             return self._send(500, {"detail": "runner failure"})

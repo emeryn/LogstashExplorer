@@ -1,0 +1,3 @@
+CEF:0|Nozomi Networks|N2OS|24.5.0|SIGN:PROGRAM:CHANGE|Program change detected|9|app=s7comm dvc=10.10.0.2 dvchost=guardian-01 src=10.10.3.40 spt=50123 dst=10.10.3.5 dpt=102 proto=TCP cs1Label=Zone cs1=Production cs2Label=Risk cs2=9.0 msg=New program uploaded to PLC-Line2 rt=1791375352000
+<134>Oct 07 2026 10:16:01 ctd-01 CEF:0|Claroty|CTD|5.1.0|Alert|Unauthorized PLC stop command|10|src=10.10.9.66 dst=10.10.3.5 dpt=102 proto=TCP act=Detected cs1Label=Alert Type cs1=Policy Violation cs2Label=Site cs2=Plant-Lyon deviceExternalId=ctd-01
+CEF:0|Dragos|Dragos Platform|2.4|ICS-THREAT-17|Modbus write from unknown asset|7|src=10.10.9.66 dst=10.10.1.5 dpt=502 proto=TCP app=modbus cs1Label=Asset cs1=PLC-Line3 rt=Oct 07 2026 10:17:00

@@ -1,0 +1,11 @@
+name = "CSV with a header line"
+vendor = "Generic"
+description = """
+Comma-separated exports whose first line names the columns (column names are detected automatically).
+Requires a single pipeline worker, as in the test harness. Adapt `separator` for `;` or tab-separated files.
+"""
+input_format = "lines"
+priority = -2  # generic: specific parsers win score ties
+detect = ['^[A-Za-z_][\w .-]*(?:,[A-Za-z_][\w .-]*){2,}$']
+fields = ["timestamp", "user", "action", "src_ip"]
+expected_events = 3

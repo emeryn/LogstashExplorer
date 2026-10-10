@@ -14,6 +14,7 @@ from app.db.models import AuthSource, User, UserStatus, utcnow
 from app.db.session import get_db
 from app.services import mfa, oidc
 from app.services.audit import audit
+from app.services.directory import load_ldap, load_oidc
 from app.services.ldap_auth import authenticate_ldap
 from app.services.local_auth import authenticate_local, equalise_timing
 from app.services.provisioning import provision
@@ -34,13 +35,13 @@ async def _open_session(db: AsyncSession, request: Request, response: Response, 
 
 
 @router.get("/providers")
-async def providers() -> dict:
-    s = get_settings()
+async def providers(db: AsyncSession = Depends(get_db)) -> dict:
+    oidc_cfg = await load_oidc(db)
     return {
         "local": True,
-        "ldap": s.ldap_enabled,
-        "oidc": s.oidc_enabled,
-        "oidc_name": s.oidc_display_name,
+        "ldap": await load_ldap(db) is not None,
+        "oidc": oidc_cfg is not None,
+        "oidc_name": oidc_cfg.display_name if oidc_cfg else None,
     }
 
 
@@ -68,11 +69,12 @@ async def login(body: LoginIn, request: Request, response: Response, db: AsyncSe
 
 @router.post("/ldap/login")
 async def ldap_login(body: LoginIn, request: Request, response: Response, db: AsyncSession = Depends(get_db)) -> dict:
-    if not get_settings().ldap_enabled:
+    ldap_cfg = await load_ldap(db)
+    if ldap_cfg is None:
         raise HTTPException(404, "LDAP disabled")
     started = time.monotonic()
     try:
-        ident = await authenticate_ldap(body.username, body.password)
+        ident = await authenticate_ldap(ldap_cfg, body.username, body.password)
     except Exception as exc:  # noqa: BLE001 - directory errors must not leak details
         log.error("LDAP error: %s", exc.__class__.__name__)
         ident = None
@@ -108,9 +110,10 @@ async def ldap_login(body: LoginIn, request: Request, response: Response, db: As
 
 @router.get("/oidc/login")
 async def oidc_login(next: str | None = Query(default=None, max_length=512), db: AsyncSession = Depends(get_db)):
-    if not get_settings().oidc_enabled:
+    oidc_cfg = await load_oidc(db)
+    if oidc_cfg is None:
         raise HTTPException(404, "OIDC disabled")
-    url = await oidc.build_authorization_url(db, next)
+    url = await oidc.build_authorization_url(db, oidc_cfg, next)
     await db.commit()
     return RedirectResponse(url, status_code=302)
 
@@ -123,12 +126,13 @@ async def oidc_callback(
     error: str | None = Query(default=None, max_length=256),
     db: AsyncSession = Depends(get_db),
 ):
-    if not get_settings().oidc_enabled:
+    oidc_cfg = await load_oidc(db)
+    if oidc_cfg is None:
         raise HTTPException(404, "OIDC disabled")
     if error or not code or not state:
         return RedirectResponse("/login?error=sso", status_code=302)
     try:
-        ident, next_path = await oidc.handle_callback(db, code, state)
+        ident, next_path = await oidc.handle_callback(db, oidc_cfg, code, state)
     except Exception as exc:  # noqa: BLE001
         log.warning("OIDC callback rejected: %s", exc)
         await audit(db, "auth.login", request=request, outcome="failure", details={"method": "oidc", "error": str(exc)})

@@ -1,0 +1,5 @@
+192.168.1.10 - - [07/Oct/2026:10:15:32 +0200] "GET /index.html HTTP/1.1" 200 5320 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36"
+10.0.0.5 - admin [07/Oct/2026:10:15:40 +0200] "POST /api/login HTTP/1.1" 401 112 "https://example.org/login" "curl/8.5.0"
+203.0.113.42 - - [07/Oct/2026:10:16:01 +0200] "GET /images/logo.png HTTP/2.0" 304 - "https://example.org/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
+2001:db8::17 - - [07/Oct/2026:10:16:09 +0200] "GET /healthz HTTP/1.1" 200 3
+198.51.100.7 - - [07/Oct/2026:10:16:12 +0200] "\x16\x03\x01" 400 157 "-" "-"

@@ -7,12 +7,15 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.mcp import TOOLS
 from app.api.schemas import CodeIn, CredentialIn, TokenIn
+from app.core.config import get_settings
 from app.core.deps import Principal, get_principal
-from app.db.models import Session, WebAuthnCredential
+from app.db.models import ROLE_RANK, Session, WebAuthnCredential
 from app.db.session import get_db
 from app.services import mfa
 from app.services.audit import audit
+from app.services.settings_store import get_setting
 from app.services.tokens import create_token, list_tokens, revoke_token, token_out
 
 router = APIRouter(prefix="/api/me", tags=["profile"])
@@ -143,6 +146,22 @@ async def webauthn_delete(
     return {"ok": True}
 
 
+# ---- MCP -------------------------------------------------------------------------------------
+@router.get("/mcp")
+async def mcp_info(principal: Principal = Depends(get_principal), db: AsyncSession = Depends(get_db)) -> dict:
+    """What an MCP client connected with one of my tokens gets (role-dependent tool list)."""
+    rank = ROLE_RANK[principal.user.role]
+    return {
+        "enabled": (await get_setting(db, "mcp"))["enabled"],
+        "url": get_settings().public_url.rstrip("/") + "/api/mcp",
+        "tools": [
+            {"name": t.name, "description": t.description, "read_only": t.read_only}
+            for t in TOOLS.values()
+            if rank >= ROLE_RANK[t.min_role]
+        ],
+    }
+
+
 # ---- API tokens ----------------------------------------------------------------------------
 @router.get("/tokens")
 async def tokens(principal: Principal = Depends(get_principal), db: AsyncSession = Depends(get_db)) -> list[dict]:
@@ -155,14 +174,14 @@ async def token_create(
 ) -> dict:
     if principal.token is not None:
         raise HTTPException(403, "API tokens cannot mint new tokens")
-    token, raw = await create_token(db, principal.user.id, body.name, body.expires_in_days)
+    token, raw = await create_token(db, principal.user.id, body.name, body.expires_in_days, body.scope)
     await audit(
         db,
         "token.create",
         request=request,
         actor=principal.user,
         target=token.name,
-        details={"expires_at": token.expires_at.isoformat()},
+        details={"expires_at": token.expires_at.isoformat(), "scope": token.scope},
     )
     await db.commit()
     return {**token_out(token), "token": raw}  # displayed once

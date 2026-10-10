@@ -159,11 +159,47 @@ export interface ProjectMeta {
   via_groups?: string[];
 }
 
+export type InputFields = Record<string, string>;
+
 export interface Project extends ProjectMeta {
   config: string;
   sample: string | null;
   instructions: string | null;
   expected_output: string | null;
+  input_fields: InputFields;
+}
+
+export type ParserCategory = "windows" | "web" | "network" | "system" | "industrial";
+
+export interface ParserSummary {
+  id: string;
+  name: string;
+  category: ParserCategory;
+  category_label: string;
+  vendor: string;
+  description: string;
+  input_format: "lines" | "json";
+  fields: string[];
+  score?: number;
+}
+
+export interface Parser extends ParserSummary {
+  filter: string;
+  sample: string;
+  notes: string;
+}
+
+export interface ApiToken {
+  id: string;
+  name: string;
+  prefix: string;
+  scope: "read" | "write";
+  created_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+  last_used_at: string | null;
+  username?: string;
+  auth_source?: string;
 }
 
 export const ROLE_RANK: Record<Role, number> = { user: 1, advanced: 2, admin: 3 };

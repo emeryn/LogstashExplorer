@@ -1,0 +1,12 @@
+name = "Microsoft IIS (W3C extended)"
+vendor = "Microsoft"
+description = """
+IIS access logs in the default W3C extended format (`date time s-ip cs-method cs-uri-stem cs-uri-query s-port
+cs-username c-ip cs(User-Agent) cs(Referer) sc-status sc-substatus sc-win32-status time-taken`). `#` header
+lines are dropped. IIS writes timestamps in UTC.
+"""
+input_format = "lines"
+detect = ['^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [\d.:a-fA-F]+ [A-Z]+ /\S* \S+ \d+ \S+ [\d.:a-fA-F]+ \S+ \S+ \d{3} \d+ \d+ \d+$', '^#Software: Microsoft Internet Information Services']
+fields = ["server.ip", "http.request.method", "url.path", "url.query", "server.port", "source.ip",
+          "user_agent.original", "http.response.status_code", "iis.access.time_taken_ms", "user.name", "event.dataset"]
+expected_events = 3

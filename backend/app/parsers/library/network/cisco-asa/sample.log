@@ -1,0 +1,7 @@
+<166>Oct 07 2026 10:15:32 fw-paris : %ASA-6-302013: Built inbound TCP connection 123456 for outside:203.0.113.42/51234 (203.0.113.42/51234) to dmz:10.0.1.20/443 (198.51.100.10/443)
+<166>Oct 07 2026 10:15:33 fw-paris : %ASA-6-302015: Built outbound UDP connection 123457 for outside:8.8.8.8/53 (8.8.8.8/53) to inside:10.0.0.5/50111 (198.51.100.11/50111)
+<166>Oct 07 2026 10:16:40 fw-paris : %ASA-6-302014: Teardown TCP connection 123456 for outside:203.0.113.42/51234 to dmz:10.0.1.20/443 duration 0:01:08 bytes 53201 TCP FINs from outside
+<164>Oct 07 2026 10:16:41 fw-paris : %ASA-4-106023: Deny tcp src outside:198.51.100.7/55000 dst inside:10.0.0.10/3389 by access-group "OUTSIDE_IN" [0x0, 0x0]
+%ASA-6-106100: access-list INSIDE_OUT denied udp inside/10.0.0.9(5353) -> outside/224.0.0.251(5353) hit-cnt 1 first hit [0x5d3a1f, 0x0]
+<166>Oct 07 2026 10:17:02 fw-paris : %ASA-6-605005: Login permitted from 10.0.0.5/51900 to inside:10.0.0.1/ssh for user "netadmin"
+<166>Oct 07 2026 10:17:30 fw-paris : %ASA-6-113005: AAA user authentication Rejected : reason = AAA failure : server = 10.0.0.2 : user = admin : user IP = 198.51.100.9

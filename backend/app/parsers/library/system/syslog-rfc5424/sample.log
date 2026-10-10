@@ -1,0 +1,3 @@
+<165>1 2026-10-07T10:15:32.123Z srv-app01 billing 4321 ORDER [origin ip="10.0.0.12" software="billing" swVersion="3.4.1"] Order 18273 created for customer 9921
+<134>1 2026-10-07T10:15:40+02:00 fw01.corp.local firewall - CONN [meta sequenceId="1442"] Connection allowed 10.0.0.5:51234 -> 93.184.216.34:443
+<86>1 2026-10-07T10:16:01.000004Z srv-app01 sudo 5512 - - alice : TTY=pts/0 ; PWD=/home/alice ; USER=root ; COMMAND=/usr/bin/systemctl restart billing

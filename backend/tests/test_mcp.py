@@ -14,19 +14,39 @@ BEARER = {"Authorization": "Bearer lsx_test_x"}
 
 
 class FakeDb:
+    """Just enough of AsyncSession: settings are read (defaults apply) and audit rows are collected."""
+
+    def __init__(self, settings: dict | None = None):
+        self.settings = settings or {}
+        self.added: list = []
+
+    async def get(self, model, key):
+        value = self.settings.get(key)
+        return types.SimpleNamespace(value=value) if value is not None else None
+
+    def add(self, obj):
+        self.added.append(obj)
+
+    async def flush(self):
+        pass
+
+    async def commit(self):
+        pass
+
     async def rollback(self):
         pass
 
 
-def _client(role: Role = Role.USER) -> TestClient:
+def _client(role: Role = Role.USER, scope: str = "write", db: FakeDb | None = None) -> TestClient:
     user = types.SimpleNamespace(
         id=uuid.uuid4(), username="alice", role=role, display_name="Alice", email=None, auth_source="local",
         status="active", must_change_password=False, totp_enabled=False, last_login_at=None,
     )  # fmt: skip
-    principal = Principal(user=user, token=types.SimpleNamespace(prefix="abcd1234"))
+    principal = Principal(user=user, token=types.SimpleNamespace(prefix="abcd1234", scope=scope))
+    session = db or FakeDb()
 
     async def fake_db():
-        yield FakeDb()
+        yield session
 
     app = FastAPI()
     app.include_router(mcp.router)
@@ -109,3 +129,42 @@ def test_invalid_arguments_are_not_echoed():
 )
 def test_transport_guards(headers, status):
     assert _rpc(_client(), "ping", **headers).status_code == status
+
+
+def test_read_only_token_only_sees_read_tools():
+    names = {t["name"] for t in _rpc(_client(Role.ADVANCED, scope="read"), "tools/list").json()["result"]["tools"]}
+    assert {"list_projects", "get_project", "run_pipeline"} <= names
+    assert not names & {"create_project", "update_project", "duplicate_project", "run_agent"}
+    denied = _rpc(_client(scope="read"), "tools/call", {"name": "create_project", "arguments": {}}).json()
+    assert denied["error"]["code"] == mcp.INVALID_PARAMS
+
+
+def test_server_can_be_disabled_by_an_administrator():
+    client = _client(db=FakeDb({"mcp": {"enabled": False}}))
+    assert _rpc(client, "ping").status_code == 403
+
+
+def test_tool_calls_are_audited(monkeypatch):
+    async def fake_projects(principal, db):
+        return []
+
+    monkeypatch.setattr("app.api.projects.projects", fake_projects)
+    db = FakeDb()
+    _rpc(_client(db=db), "tools/call", {"name": "list_projects", "arguments": {}})
+    _rpc(_client(db=db), "tools/call", {"name": "get_project", "arguments": {"project_id": "nope"}})
+    entries = [(a.action, a.target, a.outcome, a.details["token"]) for a in db.added]
+    assert entries == [
+        ("mcp.tool_call", "list_projects", "success", "abcd1234"),
+        ("mcp.tool_call", "get_project", "failure", "abcd1234"),
+    ]
+
+
+def test_parser_tools_are_available_to_read_only_tokens():
+    client = _client(scope="read")
+    names = {t["name"] for t in _rpc(client, "tools/list").json()["result"]["tools"]}
+    assert {"list_parsers", "get_parser", "detect_format", "apply_parser"} <= names
+    sample = '%ASA-4-106023: Deny tcp src o:1.2.3.4/5 dst i:10.0.0.1/22 by access-group "X"'
+    res = _rpc(client, "tools/call", {"name": "detect_format", "arguments": {"sample": sample}}).json()["result"]
+    assert res["structuredContent"]["matches"][0]["id"] == "cisco-asa"
+    listed = _rpc(client, "tools/call", {"name": "list_parsers", "arguments": {"category": "industrial"}}).json()
+    assert {p["category"] for p in listed["result"]["structuredContent"]["parsers"]} == {"industrial"}

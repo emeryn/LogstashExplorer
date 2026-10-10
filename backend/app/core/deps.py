@@ -51,11 +51,19 @@ async def _authenticate(request: Request, db: AsyncSession) -> Principal | None:
     return Principal(user=user, session=session)
 
 
+# POST routes a read-only token may call: they compute or test, they never change stored data.
+READ_ONLY_POSTS = {"/api/pipeline/run", "/api/pipeline/evtx", "/api/parsers/detect", "/api/mcp"}
+
+
 async def get_principal_partial(request: Request, db: AsyncSession = Depends(get_db)) -> Principal:
     """Authenticated, but MFA may be pending and password change may be required."""
     principal = await _authenticate(request, db)
     if principal is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required")
+    if principal.token is not None and principal.token.scope == "read":
+        safe = request.method in ("GET", "HEAD") or (request.method == "POST" and request.url.path in READ_ONLY_POSTS)
+        if not safe:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Read-only API token")
     return principal
 
 

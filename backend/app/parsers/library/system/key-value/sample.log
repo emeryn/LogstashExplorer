@@ -1,0 +1,2 @@
+ts=2026-10-07T10:15:32Z level=info app=backup job="nightly full" status=ok bytes=104857600 duration=812s
+ts=2026-10-07T10:16:00Z level=error app=backup job="hourly incr" status=failed reason="disk full" bytes=0

@@ -3,17 +3,22 @@
 Secure web application to **test, parse and automatically fix Logstash configurations**.
 Load raw logs, edit `logstash.conf` and see the **actual** Logstash output. An autonomous AI agent
 (local Ollama or OpenAI) can also write the configuration, run it, read the errors and fix it in a loop
-until it validates.
+until it validates. A library of **29 ready-made parsers** (Windows EVTX, web servers, firewalls, Linux,
+CEF/LEEF, industrial protocols) detects the format of your logs and gives you a working filter to start from.
 
-![Workspace](docs/screenshots/02-espace-de-travail.png)
+![Workspace](docs/screenshots/workspace.png)
 
-| Syslog check | Sharing | Concurrent editing |
+| Parser library | Input fields | Light theme |
 |---|---|---|
-| ![Syslog](docs/screenshots/03-verification-syslog.png) | ![Sharing](docs/screenshots/share-groups.png) | ![Conflict](docs/screenshots/08-edition-concurrente.png) |
+| ![Parser library](docs/screenshots/parser-library.png) | ![Input fields](docs/screenshots/input-fields.png) | ![Light theme](docs/screenshots/workspace-light.png) |
 
-| Autonomous agent | Administration | Audit |
+| Administration overview | User sheet | Directory & SSO |
 |---|---|---|
-| ![Agent](docs/screenshots/06-agent-autonome.png) | ![Admin](docs/screenshots/09-admin-utilisateurs.png) | ![Audit](docs/screenshots/13-admin-audit.png) |
+| ![Overview](docs/screenshots/admin-overview.png) | ![User](docs/screenshots/admin-user.png) | ![Directory](docs/screenshots/admin-directory.png) |
+
+| MCP access (profile) | MCP & tokens (admin) |
+|---|---|
+| ![Profile MCP](docs/screenshots/profile-mcp.png) | ![Admin MCP](docs/screenshots/admin-mcp.png) |
 
 - **Frontend**: React 19 + TypeScript + Vite + Monaco Editor (everything bundled, no CDN, works on isolated networks).
 - **Backend**: Python 3.14 / FastAPI. Logstash orchestration, native EVTX ingestion, agentic loop.
@@ -132,6 +137,26 @@ flowchart LR
   executes up to `RUNNER_CONCURRENCY` (3 by default) Logstash instances in parallel, with a 120 s queue, and
   scales with `docker compose up -d --scale runner=N` (DNS load balancing). Fairness is ensured by a limit
   of `LSX_MAX_RUNS_PER_USER` (2) simultaneous runs/agents per user (HTTP 429 beyond).
+- **Parser library**: 29 ready-made filters for the formats most seen in companies, each one checked in a
+  real Logstash against its sample with and without ECS compatibility (`scripts/check-parsers.py`):
+
+  | Category | Parsers |
+  |---|---|
+  | Windows | Security (EVTX), Sysmon (EVTX), PowerShell (EVTX), any EVTX channel, Windows events from NXLog (JSON) |
+  | Web & proxy | Apache / Nginx access, Apache error, Nginx error, IIS W3C, Squid, HAProxy |
+  | Network & security | Cisco ASA / FTD, FortiGate, Palo Alto PAN-OS, Check Point, Stormshield SNS, CEF, LEEF |
+  | Systems & generic | Syslog RFC 3164 and 5424, Linux auth (sshd, sudo, PAM), auditd, JSON lines, key=value, CSV |
+  | Industrial (OT/ICS) | Zeek Modbus, Zeek DNP3, Zeek S7comm (CISA ICSNPP), OT security alerts in CEF (Nozomi, Claroty, Dragos…) |
+
+  Filters map to ECS field names. The format of the source logs is **detected automatically** (share of
+  matching lines, specific parsers ranked before generic ones) and the matching parser is offered in the
+  workspace, given to the AI agent as a starting point and exposed to MCP clients. Samples are synthetic:
+  validate the result on your own logs. A parser is a directory `backend/app/parsers/library/<category>/<id>/`
+  (`parser.toml`, `filter.conf`, sample) — adding one requires no code change.
+- **Input fields**: fields a real input would add to every event before the filters (e.g. the file input's
+  `[log][file][path]`, or `path` without ECS) can be declared in the workspace to test filters that extract
+  values from them (host, application, environment…). The runner injects them with `add_field` on its
+  stdin input after strict validation; they are saved (encrypted) with the project and passed to the agent.
 - **Native EVTX**: Windows `.evtx` logs are converted to JSON lines with the Rust `evtx` parser (Python
   binding of `evtx_dump` / evtx2json) as soon as they are uploaded in the left panel.
 - **AI agent**: Ollama and OpenAI (or any OpenAI-compatible endpoint). Endpoints, models, keys and
@@ -142,7 +167,18 @@ flowchart LR
   the saved one.
 - **Authentication**: local Argon2id accounts with anti-timing and lockout, TOTP (replay protection),
   WebAuthn/passkeys, OIDC (code + PKCE + state + nonce, no open redirect), LDAPS (TLS mandatory),
-  service accounts and revocable API tokens.
+  service accounts and revocable API tokens, **read-only or read & write** (a read-only token can only
+  call GET routes and the side-effect-free POSTs: run, EVTX conversion, format detection, MCP).
+- **Directory & SSO in the admin**: OIDC (issuer, client, scopes, groups claim, button label) and LDAPS
+  (URL, bind DN, search base, filter, group attribute) are configured in **Administration → Directory &
+  SSO**, with the client secret and bind password encrypted at rest, the redirect URI to register, and
+  connection tests (OIDC discovery; LDAPS TLS + bind + optional user lookup showing the groups found).
+  `LSX_OIDC_*` / `LSX_LDAP_*` variables only seed these settings on first boot.
+- **Administration**: overview dashboard (accounts, MFA coverage, logins / agent runs / MCP calls over
+  24 h, integrations status, last backup, CA certificates expiring within 30 days, recent failures),
+  approval queue for pending SSO / LDAPS accounts (approve with a role, or reject), user search and filters,
+  user sheet (role, status, MFA, directory groups, sessions, tokens, projects, recent audit entries, support
+  actions such as password / MFA reset and "sign out everywhere"), and an overview of every account's tokens.
 - **Roles**: User, Advanced user (AI agent), Administrator. Automatic directory group → role mapping.
   Auto-provisioning toggle: when disabled, new SSO accounts stay "pending".
 - **Audit**: logins, MFA, rights, exports, configuration, PKI, backups, with IP, user and context. CSV
@@ -150,7 +186,7 @@ flowchart LR
 - **Logging**: JSON on stdout, DEBUG→CRITICAL levels, PII masking toggled from the admin (emails, phone
   numbers, IBAN, cards, NIR).
 - **Remote syslog**: application logs and the audit trail can be forwarded in RFC 5424 format to a remote
-  syslog server (SIEM, rsyslog, syslog-ng, Graylog…) configured in **Administration → Security & logs**:
+  syslog server (SIEM, rsyslog, syslog-ng, Graylog…) configured in **Administration → Logs & syslog**:
   UDP, TCP or TLS (RFC 5425), octet-counting or newline framing, facility, optional client certificate for
   mutual TLS. The server certificate is verified against the system CAs plus the CAs imported in the PKI
   tab. Forwarding goes through a bounded in-memory queue and a background thread, so a slow or unreachable
@@ -175,8 +211,12 @@ flowchart LR
 | GET/DELETE | `/api/me/sessions` | authenticated | Active sessions / close the others |
 | POST | `/api/me/totp/{setup,enable,disable}` | authenticated | TOTP |
 | GET/POST/DELETE | `/api/me/webauthn…` | authenticated | Security keys / passkeys |
-| GET/POST/DELETE | `/api/me/tokens…` | authenticated | Personal API tokens |
-| POST | `/api/pipeline/run` | user | Run a configuration on logs |
+| GET/POST/DELETE | `/api/me/tokens…` | authenticated | Personal API tokens (`scope`: `read` / `write`) |
+| GET | `/api/me/mcp` | authenticated | MCP server URL, status and tools available to my role |
+| POST | `/api/pipeline/run` | user | Run a configuration on logs (`input_fields` optional) |
+| GET | `/api/workspace/settings` | user | Pipeline ECS compatibility mode |
+| GET | `/api/parsers[/{id}]` | user | Parser library / one parser (filter, sample, fields) |
+| POST | `/api/parsers/detect` | user | Rank library parsers matching a sample |
 | POST | `/api/pipeline/evtx` | user | Convert an `.evtx` file to JSON lines |
 | GET/POST | `/api/pipelines` | user | My projects + projects shared with me / create |
 | GET/PUT/DELETE | `/api/pipelines/{id}` | read / write / owner | Open / save (`version`, `force`) / delete |
@@ -190,10 +230,16 @@ flowchart LR
 | GET | `/api/groups/mine` | user | My directory groups (last login) |
 | GET | `/api/groups/directory?q=` | user | Shareable groups (mine; all of them for an admin) |
 | POST | `/api/agent/run` | advanced | Agentic loop (NDJSON stream) |
+| GET | `/api/admin/overview` | admin | Dashboard: accounts, activity, integrations, failures |
 | GET/POST/PATCH/DELETE | `/api/admin/users[/{id}]` | admin | Accounts, roles, status |
-| POST | `/api/admin/users/{id}/{reset-password,unlock,reset-mfa}` | admin | Support actions |
+| GET | `/api/admin/users/{id}/detail` | admin | User sheet (groups, sessions, tokens, projects, audit) |
+| POST | `/api/admin/users/{id}/{approve,reject}` | admin | Approve (with a role) or reject a pending account |
+| POST | `/api/admin/users/{id}/{reset-password,unlock,reset-mfa,revoke-sessions}` | admin | Support actions |
+| GET/DELETE | `/api/admin/tokens[/{id}]` | admin | Active tokens of every account / revoke |
+| GET | `/api/admin/directory` | admin | OIDC and LDAPS settings (secrets never returned) |
+| PUT/POST | `/api/admin/directory/{oidc,ldap}` · `…/test` | admin | Save / test the directory settings |
 | GET/POST/DELETE | `/api/admin/users/{id}/tokens…` | admin | Service account tokens |
-| GET/PUT | `/api/admin/settings[/{logging,provisioning}]` | admin | PII masking, log level, auto-provisioning |
+| GET/PUT | `/api/admin/settings[/{logging,provisioning,mcp}]` | admin | PII masking, log level, auto-provisioning, MCP on/off |
 | GET/PUT/POST | `/api/admin/syslog` · `/api/admin/syslog/test` | admin | Remote syslog forwarding settings, status and test message |
 | GET/POST/DELETE | `/api/admin/group-mappings…` | admin | Groups → roles |
 | GET/PUT/POST | `/api/admin/ai` · `/api/admin/ai/test` | admin | LLM configuration and test |
@@ -210,16 +256,22 @@ With `LSX_ENV=development`, the OpenAPI documentation is served on `/api/docs`.
 `POST /api/mcp` exposes the application to MCP clients (Claude Code, Claude Desktop, IDEs…) through the
 Streamable HTTP transport, in stateless mode (JSON responses, no SSE stream).
 
-- **Identity**: only the user's personal API token (`Authorization: Bearer lsx_…`, created from "My
-  profile"); session cookies are rejected. Revoked or expired token, disabled account or pending password
-  change → rejected.
+- **Identity**: only the user's personal API token (`Authorization: Bearer lsx_…`); session cookies are
+  rejected. Revoked or expired token, disabled account or pending password change → rejected. **Profile &
+  MCP** generates a dedicated token and shows ready-to-paste configurations for Claude Code, Claude
+  Desktop, VS Code and Cursor.
 - **Scope**: each tool calls the same handlers as the web UI, with the token's identity. The client
   therefore only sees what the user sees in their session: their projects and those shared with them
   (personally or through a group), with the same read/write rights, and the AI agent only for the
   "advanced" role. Writes are recorded in the audit trail just like from the UI.
-- **Tools**: `whoami`, `list_projects`, `get_project`, `create_project`, `update_project` (optimistic
-  locking on `version`), `duplicate_project`, `run_pipeline`, `run_agent` (advanced role).
-  Deliberately not exposed: deletion, sharing management, tokens and administration.
+- **Tools**: `whoami`, `list_projects`, `get_project`, `run_pipeline`, `list_parsers`, `get_parser`,
+  `detect_format`, `apply_parser` (read tools), plus `create_project`, `update_project` (optimistic locking
+  on `version`), `duplicate_project` and `run_agent` (advanced role) with a read & write token. Runs and
+  projects accept `input_fields`. Deliberately not exposed: deletion, sharing management, tokens and
+  administration.
+- **Control**: a read-only token only sees the read tools; every tool call is recorded in the audit trail
+  (tool, token prefix, outcome); administrators can switch the server off and see / revoke every token in
+  **Administration → MCP & tokens**.
 - **Protections**: `Origin` header check (DNS rebinding), protocol version check, per-user run quotas
   shared with the UI, submitted values never echoed in errors.
 
@@ -331,24 +383,21 @@ All variables are optional (`LSX_` prefix, see `.env.example` and `backend/app/c
 | `LSX_HTTP_PORT` | `8080` | Port published on 127.0.0.1 |
 | `LSX_PUBLIC_URL` | `http://localhost:${LSX_HTTP_PORT}` | Public origin (cookies, WebAuthn, OIDC, CSRF check) |
 | `LSX_WEBAUTHN_RP_ID` | `localhost` | WebAuthn domain |
-| `LSX_OIDC_ISSUER`, `LSX_OIDC_CLIENT_ID` | — | Enables OIDC (secret: `oidc_client_secret`) |
-| `LSX_LDAP_URL`, `LSX_LDAP_BIND_DN`, `LSX_LDAP_USER_BASE` | — | Enables LDAPS (secret: `ldap_bind_password`) |
-| `LSX_LDAP_USER_FILTER` | `(&(objectClass=person)(sAMAccountName={username}))` | User filter (OpenLDAP: `(&(objectClass=inetOrgPerson)(uid={username}))`) |
-| `LSX_LDAP_GROUP_ATTRIBUTE` | `memberOf` | Attribute carrying the groups (roles and group sharing) |
+| `LSX_OIDC_*`, `LSX_LDAP_*` | — | First boot only: seed the OIDC / LDAPS settings, then managed in Administration → Directory & SSO |
 | `LSX_SECRETS_BACKEND` | `file` | `file`, `env` or `vault` (`LSX_VAULT_ADDR`, `LSX_VAULT_TOKEN_FILE`, `LSX_VAULT_KV_PATH`) |
 
 - **Ollama on the host**: endpoint `http://host.docker.internal:11434` (default value in Administration → AI agent).
-- **Connecting an LDAPS directory** (procedure validated against OpenLDAP + internal CA):
-  1. fill in `LSX_LDAP_*` in `.env`;
-  2. store the service account password, read from stdin and never passed as an argument:
-     `docker compose run --rm -T secrets-init python -m app.cli set-secret ldap_bind_password`, then
-     `docker compose up -d`;
-  3. import the internal CA in **Administration → PKI** (the LDAPS certificate is verified: without the CA,
+- **Connecting an LDAPS directory**:
+  1. import the internal CA in **Administration → PKI** (the LDAPS certificate is verified: without the CA,
      the connection is refused);
-  4. define the group → role mappings and auto-provisioning.
+  2. in **Administration → Directory & SSO**, fill in the URL, service account, password, search base and
+     filter, save, then **Test connection** with a username to check the bind and the groups found;
+  3. define the group → role mappings and auto-provisioning, then enable directory sign-in.
+- **Connecting an OIDC provider**: register the redirect URI shown in **Directory & SSO** at the identity
+  provider, enter the issuer, client ID and secret, **Test discovery**, then enable the SSO button.
 - **Secrets in production**: store `db_password`, `master_key`, `kem_x25519_sk`, `kem_mlkem768_seed`,
-  `runner_token`, `oidc_client_secret` and `ldap_bind_password` in Vault (KV v2), then provide the token
-  through a Vault Agent sidecar.
+  `runner_token`, and optionally `oidc_client_secret` / `ldap_bind_password` (used when they are not set in
+  the admin) in Vault (KV v2), then provide the token through a Vault Agent sidecar.
 - **Restoring a backup**: `docker compose exec backend python -m app.cli decrypt-backup /backups/<f>.dump.enc /tmp/db.dump` then `pg_restore`.
 ### TLS reverse proxy (Nginx)
 
@@ -402,6 +451,10 @@ cd backend && python -m venv .venv && . .venv/bin/activate && pip install -r req
 pytest && ruff check . && bandit -c pyproject.toml -r app
 # Runner
 cd runner && pytest tests
+# Parser library: run every parser against its sample in a real Logstash (both ECS modes)
+docker run -d --rm --name lsx-runner -p 127.0.0.1:8701:8700 -v <dir with runner_token>:/run/lsx-secrets/runner:ro \
+  --tmpfs /tmp:size=1g,exec logstash-explorer/runner:0.1.0
+LSX_RUNNER_URL=http://127.0.0.1:8701 LSX_RUNNER_TOKEN=<token> python scripts/check-parsers.py
 # Frontend (Node 24) — proxies /api to localhost:8000
 cd frontend && npm ci --ignore-scripts && npm run dev
 # Hooks
@@ -418,3 +471,5 @@ pre-commit install
   per replica (use a PostgreSQL/Redis counter if needed).
 - Group membership is refreshed at login: a group removal in the directory takes effect at the user's next
   login (at most 8 h, the absolute session duration).
+- Parser library samples are synthetic, written from vendor documentation: vendor formats vary between
+  versions and settings (e.g. PAN-OS columns, FortiOS fields), so check each filter on your own logs.

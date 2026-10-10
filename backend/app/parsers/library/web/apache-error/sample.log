@@ -1,0 +1,4 @@
+[Wed Oct 07 10:15:32.123456 2026] [core:error] [pid 1234:tid 140137] [client 10.0.0.5:51234] AH00126: Invalid URI in request GET /../../etc/passwd HTTP/1.1
+[Wed Oct 07 10:16:05.000981 2026] [ssl:warn] [pid 1230:tid 140101] AH01909: www.example.org:443:0 server certificate does NOT include an ID which matches the server name
+[Wed Oct 07 10:17:44.551023 2026] [authz_core:error] [pid 1288:tid 140222] [client 203.0.113.42:60412] AH01630: client denied by server configuration: /var/www/html/admin
+[Wed Oct 07 10:18:00.000100 2026] [mpm_event:notice] [pid 1000:tid 140000] AH00489: Apache/2.4.62 (Unix) configured -- resuming normal operations

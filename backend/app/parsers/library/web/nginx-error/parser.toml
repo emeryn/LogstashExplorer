@@ -1,0 +1,10 @@
+name = "Nginx error log"
+vendor = "Nginx"
+description = """
+Nginx `error_log`: level, process / thread, connection number, and the client, server, request and host
+details nginx appends to the message.
+"""
+input_format = "lines"
+detect = ['^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} \[\w+\] \d+#\d+: ']
+fields = ["log.level", "process.pid", "nginx.error.connection_id", "source.address", "server.domain",
+          "http.request.method", "url.original", "url.domain", "error.message", "event.dataset"]

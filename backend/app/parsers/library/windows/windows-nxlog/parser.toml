@@ -1,0 +1,11 @@
+name = "Windows events from NXLog (JSON)"
+vendor = "Microsoft, NXLog"
+description = """
+Windows events shipped by NXLog `im_msvistalog` with `to_json()`: one JSON object per event with the System
+fields (`EventTime`, `Hostname`, `EventID`, `SourceName`, `Channel`…) and the event data at the root. Maps
+host, event, user, network and process fields to ECS. `EventTime` is in the agent's local time.
+"""
+input_format = "json"
+detect = ['"SourceModuleType"\s*:\s*"im_msvistalog"', '"EventTime"\s*:\s*"[^"]+".*"Hostname".*"EventID"']
+fields = ["event.code", "event.outcome", "host.name", "winlog.channel", "winlog.provider_name", "message",
+          "user.name", "source.ip", "source.port", "winlog.logon.type", "process.executable", "log.level"]

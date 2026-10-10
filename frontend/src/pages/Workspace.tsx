@@ -11,14 +11,20 @@ import {
   put,
   stream,
   upload,
+  type Parser,
+  type ParserSummary,
   type Project,
   type ProjectMeta,
   type RunResult,
   type User,
 } from "../api";
+import InputFieldsEditor, { fieldError, toFields, toRows, type FieldRow } from "../components/InputFields";
+import { ParserLibraryDialog } from "../components/ParserLibrary";
 import ShareDialog from "../components/ShareDialog";
 import SyslogView from "../components/SyslogView";
 import { monaco } from "../monaco";
+import { useEditorTheme } from "../theme";
+import { Icon } from "../ui";
 
 type InputFormat = "lines" | "json";
 type AgentEvent = Record<string, unknown> & { type: string; n?: number };
@@ -70,6 +76,7 @@ const EDITOR_OPTIONS = {
   renderWhitespace: "selection" as const,
 };
 const MAX_TEXT = 5 * 1024 * 1024;
+const DETECT_SAMPLE = 64 * 1024;
 
 function failureTags(events: Record<string, unknown>[]): Record<string, number> {
   const counts: Record<string, number> = {};
@@ -102,21 +109,38 @@ function markersFor(result: RunResult | null): monaco.editor.IMarkerData[] {
   return markers;
 }
 
-export default function Workspace({ user }: { user: User }) {
+export default function Workspace({
+  user,
+  pendingParser,
+  onParserConsumed,
+}: {
+  user: User;
+  pendingParser: { parser: Parser; withSample: boolean } | null;
+  onParserConsumed: () => void;
+}) {
   const canAgent = hasRole(user, "advanced");
+  const editorTheme = useEditorTheme();
 
   // Shared workspace state (the three panels are views of it)
   const [input, setInput] = useState(SAMPLE_LOGS);
   const [inputFormat, setInputFormat] = useState<InputFormat>("lines");
+  const [fieldRows, setFieldRows] = useState<FieldRow[]>([]);
   const [config, setConfig] = useState(SAMPLE_CONFIG);
   const [result, setResult] = useState<RunResult | null>(null);
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState("");
   const [autoRun, setAutoRun] = useState(false);
-  const [leftTab, setLeftTab] = useState<"input" | "agent">("input");
+  const [leftTab, setLeftTab] = useState<"input" | "fields" | "agent">("input");
   const [rightTab, setRightTab] = useState<"output" | "logs" | "syslog" | "agent">("output");
   const [dragging, setDragging] = useState(false);
   const [importInfo, setImportInfo] = useState("");
+  const [ecs, setEcs] = useState("disabled");
+
+  // Parser library & format detection
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState<ParserSummary[]>([]);
+  const [appliedParser, setAppliedParser] = useState<string | null>(null);
+  const [dismissedSuggestion, setDismissedSuggestion] = useState<string | null>(null);
 
   // Projects
   const [projects, setProjects] = useState<ProjectMeta[]>([]);
@@ -138,18 +162,29 @@ export default function Workspace({ user }: { user: User }) {
   const configEditorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const runRef = useRef<() => void>(() => undefined);
 
+  const inputFields = useMemo(() => toFields(fieldRows), [fieldRows]);
+  const fieldsInvalid = fieldRows.some((r) => (r.name || r.value) && fieldError(r.name, r.value));
+
   const loadProjects = useCallback(() => {
     get<ProjectMeta[]>("/api/pipelines").then(setProjects).catch(() => undefined);
   }, []);
   useEffect(() => {
     loadProjects();
+    get<{ ecs_compatibility: string }>("/api/workspace/settings")
+      .then((s) => setEcs(s.ecs_compatibility))
+      .catch(() => undefined);
   }, [loadProjects]);
 
   const run = useCallback(async () => {
     setRunning(true);
     setRunError("");
     try {
-      const res = await post<RunResult>("/api/pipeline/run", { config, input, input_format: inputFormat });
+      const res = await post<RunResult>("/api/pipeline/run", {
+        config,
+        input,
+        input_format: inputFormat,
+        input_fields: Object.keys(inputFields).length ? inputFields : null,
+      });
       setResult(res);
       if (rightTab === "agent") setRightTab("output");
     } catch (e) {
@@ -157,7 +192,7 @@ export default function Workspace({ user }: { user: User }) {
     } finally {
       setRunning(false);
     }
-  }, [config, input, inputFormat, rightTab]);
+  }, [config, input, inputFormat, inputFields, rightTab]);
   runRef.current = run;
 
   // Optional live mode: re-run automatically after edits (debounced; Logstash start-up takes seconds).
@@ -165,7 +200,7 @@ export default function Workspace({ user }: { user: User }) {
     if (!autoRun || agentRunning) return;
     const t = setTimeout(() => runRef.current(), 2500);
     return () => clearTimeout(t);
-  }, [config, input, inputFormat, autoRun, agentRunning]);
+  }, [config, input, inputFormat, inputFields, autoRun, agentRunning]);
 
   // Error markers in the configuration editor
   useEffect(() => {
@@ -173,9 +208,52 @@ export default function Workspace({ user }: { user: User }) {
     if (model) monaco.editor.setModelMarkers(model, "logstash", markersFor(result));
   }, [result]);
 
+  // Format detection on the source logs (debounced): suggests a library parser.
+  useEffect(() => {
+    if (!input.trim()) return setSuggestions([]);
+    const t = setTimeout(() => {
+      post<{ matches: ParserSummary[] }>("/api/parsers/detect", {
+        sample: input.slice(0, DETECT_SAMPLE),
+        input_format: inputFormat,
+      })
+        .then((r) => setSuggestions(r.matches))
+        .catch(() => setSuggestions([]));
+    }, 700);
+    return () => clearTimeout(t);
+  }, [input, inputFormat]);
+
   const onConfigMount: OnMount = (editor) => {
     configEditorRef.current = editor;
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => runRef.current());
+  };
+
+  // ---- Parser library ------------------------------------------------------------------------
+  const applyParser = useCallback((parser: Parser, withSample: boolean) => {
+    setConfig(parser.filter);
+    setAppliedParser(parser.id);
+    setInputFormat(parser.input_format);
+    if (withSample) {
+      setInput(parser.sample);
+      setImportInfo(`Loaded the "${parser.name}" filter and its sample.`);
+    } else {
+      setImportInfo(`Loaded the "${parser.name}" filter (Ctrl+Z in the editor to undo).`);
+    }
+    setResult(null);
+    setLibraryOpen(false);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingParser) return;
+    applyParser(pendingParser.parser, pendingParser.withSample);
+    onParserConsumed();
+  }, [pendingParser, applyParser, onParserConsumed]);
+
+  const applySuggestion = async (s: ParserSummary) => {
+    try {
+      applyParser(await get<Parser>(`/api/parsers/${s.id}`), false);
+    } catch {
+      setRunError("The parser could not be loaded");
+    }
   };
 
   // ---- Input ingestion (drag & drop, upload, manual) --------------------------------------
@@ -224,6 +302,7 @@ export default function Workspace({ user }: { user: User }) {
     input_format: inputFormat,
     instructions,
     expected_output: expected || null,
+    input_fields: Object.keys(inputFields).length ? inputFields : null,
   });
 
   const applyProject = (p: Project) => {
@@ -249,9 +328,11 @@ export default function Workspace({ user }: { user: User }) {
       setConfig(p.config);
       setInput(p.sample || "");
       setInputFormat(p.input_format);
+      setFieldRows(toRows(p.input_fields));
       setInstructions(p.instructions || "");
       setExpected(p.expected_output || "");
       setResult(null);
+      setAppliedParser(null);
     } catch (e) {
       setRunError(e instanceof ApiError ? e.message : "Project unavailable");
     }
@@ -267,8 +348,12 @@ export default function Workspace({ user }: { user: User }) {
   const saveAs = async () => {
     const name = prompt("Project name", current ? `${current.name} (copy)` : "New project")?.trim();
     if (!name) return;
-    applyProject(await post<Project>("/api/pipelines", { name, ...contentBody() }));
-    loadProjects();
+    try {
+      applyProject(await post<Project>("/api/pipelines", { name, ...contentBody() }));
+      loadProjects();
+    } catch (e) {
+      setRunError(e instanceof ApiError ? e.message : "Save failed");
+    }
   };
 
   const save = async (force = false) => {
@@ -347,6 +432,7 @@ export default function Workspace({ user }: { user: User }) {
           expected_output: expected.trim() || null,
           initial_config: config.trim() && config !== SAMPLE_CONFIG ? config : null,
           max_iterations: maxIter,
+          input_fields: Object.keys(inputFields).length ? inputFields : null,
         },
         (ev) => {
           const event = ev as AgentEvent;
@@ -372,67 +458,101 @@ export default function Workspace({ user }: { user: User }) {
   const tags = useMemo(() => failureTags(events), [events]);
   const outputJson = useMemo(() => JSON.stringify(events, null, 2), [events]);
   const syslogErrors = result?.syslog?.frames.reduce((n, f) => n + f.errors.length, 0) ?? 0;
+  const top = suggestions[0];
+  const showSuggestion =
+    top && top.score !== undefined && top.score >= 0.6 && top.id !== appliedParser && top.id !== dismissedSuggestion;
 
   return (
     <div className="workspace">
       <div className="toolbar">
-        <select value={current?.id ?? ""} onChange={(e) => open(e.target.value)} aria-label="Projects">
-          <option value="">— New project (unsaved) —</option>
-          <optgroup label="My projects">
-            {projects
-              .filter((p) => p.access === "owner")
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                  {p.shares ? ` · shared (${p.shares})` : ""}
-                </option>
-              ))}
-          </optgroup>
-          <optgroup label="Shared with me">
-            {projects
-              .filter((p) => p.access !== "owner")
-              .map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {p.owner} ({ACCESS_LABEL[p.access]}{p.via_groups?.length ? `, via ${p.via_groups.join(", ")}` : ""})
-                </option>
-              ))}
-          </optgroup>
-        </select>
-        {current && (
-          <span className="project-meta muted small" title={`Modified on ${fmtDate(current.updated_at)}`}>
-            v{current.version} · {ACCESS_LABEL[current.access]}
-            {current.access !== "owner" && ` · by ${current.owner}`}
-            {current.updated_by && ` · modified by ${current.updated_by}`}
-          </span>
-        )}
-        <button onClick={() => save()} title={current?.access === "read" ? "Read-only: saves a copy" : ""}>
-          {current && current.access !== "read" ? "Save" : "Save as…"}
-        </button>
-        <button onClick={duplicate} title="Create a personal copy">
-          Duplicate
-        </button>
-        {current?.access === "owner" && (
-          <>
-            <button onClick={() => setSharing(true)}>Share</button>
-            <button className="ghost" onClick={rename}>
-              Rename
-            </button>
-            <button className="ghost danger" onClick={remove}>
-              Delete
-            </button>
-          </>
-        )}
+        <div className="group">
+          <select
+            className="project-select"
+            value={current?.id ?? ""}
+            onChange={(e) => open(e.target.value)}
+            aria-label="Projects"
+          >
+            <option value="">— New project (unsaved) —</option>
+            <optgroup label="My projects">
+              {projects
+                .filter((p) => p.access === "owner")
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {p.shares ? ` · shared (${p.shares})` : ""}
+                  </option>
+                ))}
+            </optgroup>
+            <optgroup label="Shared with me">
+              {projects
+                .filter((p) => p.access !== "owner")
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — {p.owner} ({ACCESS_LABEL[p.access]}
+                    {p.via_groups?.length ? `, via ${p.via_groups.join(", ")}` : ""})
+                  </option>
+                ))}
+            </optgroup>
+          </select>
+          {current && (
+            <span className="project-meta muted small" title={`Modified on ${fmtDate(current.updated_at)}`}>
+              <span className="badge">v{current.version}</span>
+              <span className={`badge ${current.access === "read" ? "warn" : ""}`}>{ACCESS_LABEL[current.access]}</span>
+              {current.access !== "owner" && <span>by {current.owner}</span>}
+            </span>
+          )}
+        </div>
+        <span className="sep" />
+        <div className="group">
+          <button
+            onClick={() => save()}
+            disabled={fieldsInvalid}
+            title={current?.access === "read" ? "Read-only: saves a copy" : "Save"}
+          >
+            <Icon name="save" />
+            {current && current.access !== "read" ? "Save" : "Save as…"}
+          </button>
+          <button className="ghost" onClick={duplicate} title="Create a personal copy">
+            <Icon name="copy" /> Duplicate
+          </button>
+          {current?.access === "owner" && (
+            <>
+              <button className="ghost" onClick={() => setSharing(true)}>
+                <Icon name="share" /> Share
+              </button>
+              <button className="ghost icon-only" onClick={rename} title="Rename" aria-label="Rename">
+                <Icon name="edit" />
+              </button>
+              <button className="ghost icon-only danger" onClick={remove} title="Delete" aria-label="Delete">
+                <Icon name="trash" />
+              </button>
+            </>
+          )}
+        </div>
         <span className="spacer" />
-        <label className="toggle" title="Automatically re-runs Logstash after each change">
-          <input type="checkbox" checked={autoRun} onChange={(e) => setAutoRun(e.target.checked)} /> Auto-run
-        </label>
-        <button className="primary" onClick={run} disabled={running || agentRunning} title="Ctrl+Enter">
-          {running ? "Running…" : "▶ Run"}
-        </button>
+        <div className="group">
+          <button onClick={() => setLibraryOpen(true)} title="Ready-made filters for common log formats">
+            <Icon name="library" /> Library
+            {suggestions.length > 0 && <span className="badge accent">{suggestions.length}</span>}
+          </button>
+          <label className="toggle small" title="Automatically re-runs Logstash after each change">
+            <input type="checkbox" checked={autoRun} onChange={(e) => setAutoRun(e.target.checked)} /> Auto-run
+          </label>
+          <button
+            className="primary"
+            onClick={run}
+            disabled={running || agentRunning || fieldsInvalid}
+            title="Ctrl+Enter"
+          >
+            {running ? <span className="spinner" /> : <Icon name="play" />}
+            {running ? "Running…" : "Run"}
+          </button>
+        </div>
       </div>
 
       {remoteChange && (
         <div className="banner warn">
+          <Icon name="alert" />
           {remoteChange.updated_by || "A colleague"} saved version {remoteChange.version} of this project (
           {fmtDate(remoteChange.updated_at)}).
           <button className="small" onClick={() => current && open(current.id)}>
@@ -448,6 +568,7 @@ export default function Workspace({ user }: { user: User }) {
       )}
       {conflict && (
         <div className="banner error">
+          <Icon name="alert" />
           {conflict}
           <button className="small" onClick={() => current && open(current.id)}>
             Reload the remote version
@@ -473,6 +594,9 @@ export default function Workspace({ user }: { user: User }) {
           }}
         />
       )}
+      {libraryOpen && (
+        <ParserLibraryDialog suggested={suggestions} onUse={applyParser} onClose={() => setLibraryOpen(false)} />
+      )}
 
       <div className="panels">
         {/* ---- Left panel: input ---- */}
@@ -490,24 +614,32 @@ export default function Workspace({ user }: { user: User }) {
               <button className={leftTab === "input" ? "active" : ""} onClick={() => setLeftTab("input")}>
                 Source logs
               </button>
+              <button className={leftTab === "fields" ? "active" : ""} onClick={() => setLeftTab("fields")}>
+                Input fields
+                {fieldRows.length > 0 && (
+                  <span className={`badge ${fieldsInvalid ? "error" : ""}`}>{fieldRows.length}</span>
+                )}
+              </button>
               {canAgent && (
                 <button className={leftTab === "agent" ? "active" : ""} onClick={() => setLeftTab("agent")}>
                   AI agent
                 </button>
               )}
             </div>
-            {leftTab === "input" && (
-              <div className="panel-actions">
+          </div>
+          {leftTab === "input" && (
+            <>
+              <div className="input-bar">
                 <select
                   value={inputFormat}
                   onChange={(e) => setInputFormat(e.target.value as InputFormat)}
                   aria-label="Input format"
                 >
-                  <option value="lines">Text (1 line = 1 event)</option>
+                  <option value="lines">Text lines (1 line = 1 event)</option>
                   <option value="json">JSON lines</option>
                 </select>
-                <label className="button small">
-                  File…
+                <label className="button small" title="Load a file (.log, .json, .jsonl, .evtx…)">
+                  <Icon name="upload" /> File…
                   <input
                     type="file"
                     hidden
@@ -515,24 +647,48 @@ export default function Workspace({ user }: { user: User }) {
                     onChange={(e) => e.target.files?.[0] && ingestFile(e.target.files[0])}
                   />
                 </label>
+                <span className="spacer" />
+                <span className="muted small">{input ? input.split("\n").length : 0} lines</span>
               </div>
-            )}
-          </div>
-          {leftTab === "input" ? (
-            <>
               {importInfo && <div className="info-line">{importInfo}</div>}
+              {showSuggestion && (
+                <div className="suggestion">
+                  <Icon name="wand" />
+                  <span>
+                    Looks like <strong>{top.name}</strong> ({Math.round((top.score ?? 0) * 100)}% of lines)
+                  </span>
+                  <span className="spacer" />
+                  <button className="small primary" onClick={() => applySuggestion(top)}>
+                    Use parser
+                  </button>
+                  <button className="small ghost" onClick={() => setLibraryOpen(true)}>
+                    Compare
+                  </button>
+                  <button
+                    className="small ghost icon-only"
+                    aria-label="Dismiss"
+                    onClick={() => setDismissedSuggestion(top.id)}
+                  >
+                    <Icon name="x" />
+                  </button>
+                </div>
+              )}
               <div className="editor">
                 <Editor
                   language={inputFormat === "json" ? "json" : "plaintext"}
-                  theme="vs-dark"
+                  theme={editorTheme}
                   value={input}
                   onChange={(v) => setInput(v ?? "")}
                   options={{ ...EDITOR_OPTIONS, wordWrap: "on", lineNumbers: "on" }}
                 />
               </div>
-              <div className="drop-hint">Drag and drop a file (.log, .json, .jsonl, .evtx)</div>
+              <div className="drop-hint">
+                <Icon name="upload" /> Drop a file here — .log, .json, .jsonl, Windows .evtx (converted automatically)
+              </div>
             </>
-          ) : (
+          )}
+          {leftTab === "fields" && <InputFieldsEditor rows={fieldRows} onChange={setFieldRows} ecs={ecs} />}
+          {leftTab === "agent" && (
             <div className="agent-form stack">
               <label>
                 Business instructions
@@ -556,19 +712,25 @@ export default function Workspace({ user }: { user: User }) {
                   max={20}
                   value={maxIter}
                   onChange={(e) => setMaxIter(Number(e.target.value))}
+                  style={{ width: 80 }}
                 />
               </label>
               <small className="muted">
-                The agent starts from the current configuration if you modified it, runs it, analyzes the output and the
-                Logstash errors, then fixes it until it validates.
+                The agent starts from the current configuration if you modified it (or from a matching library parser),
+                runs it with your input fields, analyzes the output and the Logstash errors, then fixes it until it
+                validates.
               </small>
               {agentRunning ? (
                 <button className="danger" onClick={stopAgent}>
-                  ■ Stop the agent
+                  <Icon name="stop" /> Stop the agent
                 </button>
               ) : (
-                <button className="primary" onClick={startAgent} disabled={!instructions.trim() || !input.trim()}>
-                  ✦ Start the autonomous agent
+                <button
+                  className="primary"
+                  onClick={startAgent}
+                  disabled={!instructions.trim() || !input.trim() || fieldsInvalid}
+                >
+                  <Icon name="sparkles" /> Start the autonomous agent
                 </button>
               )}
             </div>
@@ -579,21 +741,24 @@ export default function Workspace({ user }: { user: User }) {
         <section className="panel">
           <div className="panel-head">
             <div className="title">
-              logstash.conf <span className="muted">— {current?.name ?? "Untitled"}</span>
+              <Icon name="file" />
+              logstash.conf <span className="muted ellipsis">— {current?.name ?? "Untitled"}</span>
             </div>
-            <button
-              className="small"
-              onClick={insertSyslogOutput}
-              disabled={/\boutput\s*\{[\s\S]*\bsyslog\s*\{/.test(config)}
-              title="Adds an output { syslog { … } } block to complete with your production settings"
-            >
-              + Syslog output
-            </button>
+            <div className="panel-actions">
+              <button
+                className="small"
+                onClick={insertSyslogOutput}
+                disabled={/\boutput\s*\{[\s\S]*\bsyslog\s*\{/.test(config)}
+                title="Adds an output { syslog { … } } block to complete with your production settings"
+              >
+                <Icon name="plus" /> Syslog output
+              </button>
+            </div>
           </div>
           <div className="editor">
             <Editor
               language="logstash"
-              theme="vs-dark"
+              theme={editorTheme}
               value={config}
               onChange={(v) => setConfig(v ?? "")}
               onMount={onConfigMount}
@@ -607,17 +772,17 @@ export default function Workspace({ user }: { user: User }) {
           <div className="panel-head">
             <div className="tabs">
               <button className={rightTab === "output" ? "active" : ""} onClick={() => setRightTab("output")}>
-                Output {result ? `(${events.length})` : ""}
+                Output {result ? <span className="badge">{events.length}</span> : null}
               </button>
               <button className={rightTab === "logs" ? "active" : ""} onClick={() => setRightTab("logs")}>
-                Logs Logstash
+                Logstash logs
                 {result && result.errors.length + result.config_errors.length > 0 && (
                   <span className="badge error">{result.errors.length + result.config_errors.length}</span>
                 )}
               </button>
               {result?.syslog && (
                 <button className={rightTab === "syslog" ? "active" : ""} onClick={() => setRightTab("syslog")}>
-                  Syslog ({result.syslog.frames.length})
+                  Syslog <span className="badge">{result.syslog.frames.length}</span>
                   {syslogErrors > 0 && <span className="badge error">{syslogErrors}</span>}
                 </button>
               )}
@@ -628,14 +793,24 @@ export default function Workspace({ user }: { user: User }) {
               )}
             </div>
           </div>
-          {runError && <div className="alert error">{runError}</div>}
+          {runError && (
+            <div className="alert error" style={{ margin: 8 }}>
+              {runError}
+            </div>
+          )}
           {rightTab === "output" && (
             <>
               {result && (
                 <div className="summary">
-                  <span className={`chip ${result.ok ? "ok" : "error"}`}>{result.ok ? "Success" : "Failure"}</span>
+                  <span className={`chip ${result.ok ? "ok" : "error"}`}>
+                    <Icon name={result.ok ? "check" : "alert"} />
+                    {result.ok ? "Success" : "Failure"}
+                  </span>
                   <span className="chip">{events.length} event(s)</span>
-                  <span className="chip">{(result.duration_ms / 1000).toFixed(1)} s</span>
+                  <span className="chip">
+                    <Icon name="clock" />
+                    {(result.duration_ms / 1000).toFixed(1)} s
+                  </span>
                   {Object.entries(tags).map(([t, c]) => (
                     <span key={t} className="chip warn">
                       {t} × {c}
@@ -644,7 +819,7 @@ export default function Workspace({ user }: { user: User }) {
                 </div>
               )}
               {result?.config_errors.map((e) => (
-                <div key={e} className="alert error">
+                <div key={e} className="alert error" style={{ margin: 8 }}>
                   {e}
                 </div>
               ))}
@@ -652,13 +827,24 @@ export default function Workspace({ user }: { user: User }) {
                 {result ? (
                   <Editor
                     language="json"
-                    theme="vs-dark"
+                    theme={editorTheme}
                     value={outputJson}
                     options={{ ...EDITOR_OPTIONS, readOnly: true, folding: true }}
                   />
                 ) : (
                   <div className="placeholder">
-                    {running ? "Logstash is starting…" : "Run the configuration (Ctrl+Enter) to see the actual output."}
+                    {running ? (
+                      <span className="row">
+                        <span className="spinner" /> Logstash is starting…
+                      </span>
+                    ) : (
+                      <div className="stack" style={{ alignItems: "center" }}>
+                        <Icon name="play" />
+                        <span>
+                          Run the configuration (<kbd>Ctrl</kbd>+<kbd>Enter</kbd>) to see the actual output.
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -781,7 +967,7 @@ function AgentTimeline({
         }
       })}
       {running && (
-        <div className="muted small">
+        <div className="muted small row">
           <span className="spinner" /> The agent is working…
         </div>
       )}

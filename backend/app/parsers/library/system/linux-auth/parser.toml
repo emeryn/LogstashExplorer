@@ -1,0 +1,10 @@
+name = "Linux authentication (sshd, sudo, PAM)"
+vendor = "Linux (auth.log / secure)"
+description = """
+`/var/log/auth.log` (Debian/Ubuntu) or `/var/log/secure` (RHEL): SSH logins accepted / failed / invalid users,
+disconnections, sudo commands, PAM sessions and account creation. Sets `event.action` and `event.outcome`.
+"""
+input_format = "lines"
+detect = ['^(?:<\d{1,3}>)?\w{3} [ \d]\d \d{2}:\d{2}:\d{2} \S+ (?:sshd|sudo|su|login|useradd|groupadd|passwd|systemd-logind|CRON)(?:\[\d+\])?: ']
+fields = ["host.hostname", "process.name", "user.name", "source.ip", "source.port", "event.action", "event.outcome",
+          "system.auth.ssh.method", "user.effective.name", "process.command_line", "system.auth.sudo.tty"]

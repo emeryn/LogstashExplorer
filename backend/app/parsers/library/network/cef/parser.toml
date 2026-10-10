@@ -1,0 +1,12 @@
+name = "CEF (ArcSight Common Event Format)"
+vendor = "Any CEF source (WAF, EDR, proxies, IDS, ArcSight connectors…)"
+description = """
+`CEF:0|Vendor|Product|Version|SignatureID|Name|Severity|key=value …`, with or without a syslog header.
+Header fields map to `observer.*`, `event.code` and `event.severity`; extensions are kept under
+`cef.extensions`, the usual ones are mapped to ECS (source / destination, users, action, URL, file) and the
+`csN` / `cnN` custom fields are renamed after their labels under `cef.labels`.
+"""
+input_format = "lines"
+detect = ['CEF:\d+\|[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*\|[^|]*\|']
+fields = ["observer.vendor", "observer.product", "event.code", "cef.name", "event.severity", "source.ip",
+          "destination.ip", "destination.port", "event.action", "cef.labels", "cef.extensions"]

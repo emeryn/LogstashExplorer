@@ -1,0 +1,12 @@
+name = "Stormshield Network Security (SNS)"
+vendor = "Stormshield"
+description = """
+Stormshield SNS firewall logs (`id=firewall time="…" fw="…" … logtype="…"`): connection, filter, alarm, web,
+VPN and authentication logs. Every field stays under `stormshield`; addresses, ports, protocols, action, rule,
+interfaces, user and byte counters are mapped to ECS. The timestamp combines `time` and `tz`.
+"""
+input_format = "lines"
+detect = ['id=firewall time="\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}" fw="']
+fields = ["observer.name", "source.ip", "source.port", "destination.ip", "destination.port", "network.transport",
+          "network.protocol", "event.action", "rule.id", "observer.ingress.interface.name", "source.bytes",
+          "stormshield.logtype", "event.code", "user.name"]

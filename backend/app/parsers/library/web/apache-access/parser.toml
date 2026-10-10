@@ -1,0 +1,11 @@
+name = "Apache / Nginx access log (combined & common)"
+vendor = "Apache HTTP Server, Nginx"
+description = """
+Access logs in the NCSA *combined* format (default for Nginx, `LogFormat combined` for Apache) or the shorter
+*common* format. Extracts client address, user, request, status, size, referrer and user agent (parsed).
+"""
+input_format = "lines"
+detect = ['^\S+ \S+ \S+ \[\d{2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2} [+-]\d{4}\] "']
+fields = ["source.address", "source.ip", "http.request.method", "url.original", "http.version",
+          "http.response.status_code", "http.response.body.bytes", "http.request.referrer",
+          "user_agent.original", "user_agent.name", "user.name", "event.dataset"]

@@ -1,0 +1,11 @@
+name = "HAProxy HTTP log"
+vendor = "HAProxy"
+description = """
+HAProxy `option httplog` lines, with or without the syslog header: client, accept date, frontend / backend /
+server, timers, status, bytes, termination state, connection counters and request line.
+"""
+input_format = "lines"
+detect = ['[\d.:a-fA-F]+:\d+ \[\d{2}/\w{3}/\d{4}:\d{2}:\d{2}:\d{2}\.\d{3}\] \S+ \S+/\S+ -?\d+/-?\d+/-?\d+/-?\d+/\+?\d+ \d{3} ']
+fields = ["source.ip", "source.port", "haproxy.frontend_name", "haproxy.backend_name", "haproxy.server_name",
+          "haproxy.total_time_ms", "http.response.status_code", "http.response.bytes", "haproxy.termination_state",
+          "http.request.method", "url.original", "process.name", "event.dataset"]

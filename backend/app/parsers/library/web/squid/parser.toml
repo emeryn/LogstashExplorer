@@ -1,0 +1,11 @@
+name = "Squid proxy (native access.log)"
+vendor = "Squid"
+description = """
+Squid `access.log` in the native format: epoch timestamp, elapsed time, client, cache result / status,
+bytes, method, URL, user, hierarchy / peer and content type.
+"""
+input_format = "lines"
+detect = ['^\d{9,10}\.\d{3}\s+\d+ [\d.:a-fA-F]+ [A-Z_]+/\d{3} \d+ [A-Z]+ ']
+fields = ["source.ip", "squid.cache_status", "http.response.status_code", "http.response.bytes",
+          "http.request.method", "url.original", "user.name", "destination.address", "http.response.mime_type",
+          "squid.elapsed_ms", "event.dataset"]

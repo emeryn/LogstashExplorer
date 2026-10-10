@@ -1,0 +1,12 @@
+name = "PowerShell logs (EVTX)"
+vendor = "Microsoft"
+description = """
+PowerShell events converted from `.evtx`: script block logging (4104) and module logging (4103) from
+Microsoft-Windows-PowerShell/Operational, and the classic "Windows PowerShell" channel (400/403/600/800) whose
+details are split into `powershell.details`.
+"""
+input_format = "json"
+detect = ['"Channel"\s*:\s*"(?:Microsoft-Windows-PowerShell/Operational|Windows PowerShell)"']
+fields = ["event.code", "event.action", "host.name", "powershell.file.script_block_text",
+          "powershell.file.script_block_id", "powershell.payload", "powershell.details", "process.command_line",
+          "powershell.command.name", "user.name"]

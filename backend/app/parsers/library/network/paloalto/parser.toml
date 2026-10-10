@@ -1,0 +1,14 @@
+name = "Palo Alto Networks PAN-OS (TRAFFIC / THREAT)"
+vendor = "Palo Alto Networks"
+description = """
+PAN-OS syslog in the default CSV format for TRAFFIC and THREAT logs (PAN-OS 10.x / 11.x column order), with or
+without the syslog header. Raw columns are kept under `panos`; addresses, NAT, zones, interfaces, rule, user,
+application, action, bytes and threat details are mapped to ECS. Columns beyond the documented ones are kept as
+`panos.columnN`.
+"""
+input_format = "lines"
+detect = ['(?:^|\s)\d+,\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2},\w+,(?:TRAFFIC|THREAT|SYSTEM|CONFIG),']
+fields = ["observer.serial_number", "panos.type", "source.ip", "destination.ip", "source.nat.ip", "rule.name",
+          "source.user.name", "network.application", "observer.ingress.zone", "observer.egress.zone", "source.port",
+          "destination.port", "network.transport", "event.action", "source.bytes", "destination.bytes",
+          "panos.threat_name", "panos.severity", "url.original"]

@@ -1,0 +1,4 @@
+2026/10/07 10:15:32 [error] 1234#1234: *5678 open() "/usr/share/nginx/html/favicon.ico" failed (2: No such file or directory), client: 10.0.0.5, server: example.org, request: "GET /favicon.ico HTTP/1.1", host: "example.org"
+2026/10/07 10:16:01 [warn] 1234#1234: *5702 an upstream response is buffered to a temporary file /var/cache/nginx/proxy_temp/1/00/0000000001 while reading upstream, client: 203.0.113.42, server: api.example.org, request: "GET /export.csv HTTP/1.1", upstream: "http://10.0.1.20:8080/export.csv", host: "api.example.org"
+2026/10/07 10:17:00 [crit] 1234#1234: *5800 SSL_do_handshake() failed (SSL: error:0A00006C:SSL routines::bad key share) while SSL handshaking, client: 198.51.100.7, server: 0.0.0.0:443
+2026/10/07 10:18:12 [notice] 1#1: signal 1 (SIGHUP) received from 4321, reconfiguring

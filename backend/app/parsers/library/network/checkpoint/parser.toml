@@ -1,0 +1,10 @@
+name = "Check Point (Log Exporter, syslog)"
+vendor = "Check Point"
+description = """
+Check Point Log Exporter in `syslog` format: RFC 5424 header followed by `[key:"value"; …]`. Every field stays
+under `checkpoint`; addresses, ports, protocol, action, rule, interface, zones and user are mapped to ECS.
+"""
+input_format = "lines"
+detect = [' CheckPoint \d+ - \[\w+:"']
+fields = ["observer.ip", "source.ip", "destination.ip", "source.port", "destination.port", "event.action",
+          "rule.name", "network.direction", "observer.ingress.interface.name", "user.name", "checkpoint.product"]

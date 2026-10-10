@@ -1,0 +1,14 @@
+name = "Windows Security log (EVTX)"
+vendor = "Microsoft"
+description = """
+Security channel events converted from `.evtx` by the left panel (drop the file: it is converted to JSON lines
+automatically). Normalises the System block (`event.code`, `host.name`, `winlog.*`, outcome from the audit
+keywords) and maps logons (4624/4625/4634/4672), Kerberos / NTLM (4768/4769/4771/4776), process creation
+(4688), account and group management (4720-4767), lockouts and audit-log clearing (1102) to ECS.
+"""
+input_format = "json"
+detect = ['"Name"\s*:\s*"Microsoft-Windows-Security-Auditing"', '"Channel"\s*:\s*"Security"']
+fields = ["event.code", "event.action", "event.outcome", "host.name", "winlog.channel", "winlog.record_id",
+          "user.name", "user.domain", "user.target.name", "group.name", "source.ip", "source.port",
+          "winlog.logon.type_name", "process.executable", "process.name", "process.command_line",
+          "process.parent.executable", "service.name", "winlog.event_data"]

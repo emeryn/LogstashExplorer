@@ -14,6 +14,8 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.parsers import detect as detect_format
+from app.parsers import get as get_parser
 from app.services.llm import LLMError, chat, load_llm_config
 from app.services.runner_client import RunnerError, run_pipeline
 from app.services.settings_store import get_setting
@@ -230,6 +232,7 @@ async def run_agent(
     expected_raw: str | None,
     initial_config: str | None,
     max_iterations: int,
+    input_fields: dict[str, str] | None = None,
 ) -> AsyncIterator[dict[str, Any]]:
     cfg = await load_llm_config(db)
     ai = await get_setting(db, "ai")
@@ -247,6 +250,21 @@ async def run_agent(
         codec="json" if input_format == "json" else "line", json_hint=json_hint, plugins=ALLOWED_PLUGINS, ecs=ecs
     )
     task = f"Instructions:\n{instructions}\n\nSample logs:\n```\n{_trim(logs, 6000)}\n```"
+    if input_fields:
+        listed = "\n".join(f"- {name} = {value}" for name, value in input_fields.items())
+        task += (
+            "\n\nThe input also sets these fields on every event (e.g. the source file path); "
+            f"use them when the instructions need values they contain:\n{listed}"
+        )
+    if not (initial_config and initial_config.strip()):
+        match = next(iter(detect_format(logs, input_format, limit=1)), None)
+        if match and match["score"] >= 0.8:
+            parser = get_parser(match["id"])
+            yield {"type": "status", "n": 0, "message": f"Sample recognised as {parser.name}: suggested to the model"}
+            task += (
+                f'\n\nThe sample matches the library parser "{parser.name}". You may start from it and adapt it '
+                f"to the instructions:\n```logstash\n{_trim(parser.filter, 6000)}\n```"
+            )
     if expected is not None:
         task += (
             '\n\nExpected output events (subset match, "*" = any value):\n'
@@ -282,7 +300,7 @@ async def run_agent(
                     continue
             yield {"type": "config", "n": n, "config": config}
             yield {"type": "status", "n": n, "message": "Running Logstash…"}
-            result = await run_pipeline(config, logs, input_format, ecs)
+            result = await run_pipeline(config, logs, input_format, ecs, input_fields)
             yield {"type": "result", "n": n, **_result_summary(result)}
             issues = evaluate(result, expected, bool(logs.strip()))
             if not issues and expected is None:

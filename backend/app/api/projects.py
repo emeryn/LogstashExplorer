@@ -7,6 +7,7 @@ Access model
 Administrators get no implicit access to other people's projects (data minimisation).
 """
 
+import json
 import uuid
 from typing import Literal
 
@@ -17,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import Principal, require_role
+from app.core.input_fields import InputFields
 from app.db.models import (
     ROLE_RANK,
     AuthSource,
@@ -50,6 +52,13 @@ class ProjectIn(BaseModel):
     input_format: Literal["lines", "json"] = "lines"
     instructions: str | None = Field(default=None, max_length=20_000)
     expected_output: str | None = Field(default=None, max_length=200_000)
+    input_fields: InputFields = None
+
+    def columns(self) -> dict:
+        """Values for the Pipeline columns (input fields are stored as an encrypted JSON object)."""
+        data = self.model_dump(exclude={"version", "force"})
+        data["input_fields"] = json.dumps(data["input_fields"]) if data.get("input_fields") else None
+        return data
 
 
 class ProjectUpdate(ProjectIn):
@@ -133,6 +142,7 @@ async def _full(db: AsyncSession, p: Pipeline, access: str) -> dict:
         "sample": p.sample,
         "instructions": p.instructions,
         "expected_output": p.expected_output,
+        "input_fields": json.loads(p.input_fields) if p.input_fields else {},
     }
 
 
@@ -187,7 +197,7 @@ async def projects(principal: Principal = Depends(any_user), db: AsyncSession = 
 async def project_create(
     body: ProjectIn, request: Request, principal: Principal = Depends(any_user), db: AsyncSession = Depends(get_db)
 ) -> dict:
-    p = Pipeline(owner_id=principal.user.id, updated_by=principal.user.username, **body.model_dump())
+    p = Pipeline(owner_id=principal.user.id, updated_by=principal.user.username, **body.columns())
     db.add(p)
     await db.flush()
     await audit(db, "project.create", request=request, actor=principal.user, target=str(p.id))
@@ -227,7 +237,7 @@ async def project_update(
             f"Conflict: {p.updated_by or 'a colleague'} saved version {p.version} "
             f"(you were editing version {body.version}).",
         )
-    data = body.model_dump(exclude={"version", "force"})
+    data = body.columns()
     if access != "owner":
         data.pop("name")  # only the owner renames
     for k, v in data.items():
@@ -259,6 +269,7 @@ async def project_duplicate(
         input_format=src.input_format,
         instructions=src.instructions,
         expected_output=src.expected_output,
+        input_fields=src.input_fields,
         updated_by=principal.user.username,
     )
     db.add(copy)

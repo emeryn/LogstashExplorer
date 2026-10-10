@@ -1,0 +1,9 @@
+name = "Apache error log (2.4)"
+vendor = "Apache HTTP Server"
+description = """
+Apache 2.4 `ErrorLog` with the default `ErrorLogFormat`: timestamp with microseconds, module and level,
+process / thread, client address and the AHnnnnn error code.
+"""
+input_format = "lines"
+detect = ['^\[\w{3} \w{3} [ \d]\d \d{2}:\d{2}:\d{2}(?:\.\d+)? \d{4}\] \[(?:\w+:)?\w+\] \[pid \d+']
+fields = ["log.level", "apache.error.module", "process.pid", "source.address", "error.code", "message", "event.dataset"]

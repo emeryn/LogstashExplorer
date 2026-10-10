@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from app.db.models import User
@@ -25,6 +27,7 @@ class ChangePasswordIn(BaseModel):
 class TokenIn(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     expires_in_days: int = Field(default=90, ge=1, le=3650)
+    scope: Literal["read", "write"] = "write"
 
 
 def user_out(user: User) -> dict:

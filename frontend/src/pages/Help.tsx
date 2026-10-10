@@ -1,16 +1,20 @@
 import { hasRole, type User } from "../api";
+import { PageHeader } from "../ui";
 
 export default function Help({ user }: { user: User }) {
   return (
     <div className="page help">
-      <h1>Help</h1>
+      <PageHeader title="Help" subtitle="How to use Logstash Explorer." />
       <nav className="toc">
         <a href="#workspace">Workspace</a>
         <a href="#inputs">Input data</a>
+        <a href="#library">Parser library</a>
+        <a href="#fields">Input fields</a>
         <a href="#config">Configuration</a>
         <a href="#projects">Projects & sharing</a>
         <a href="#syslog">Syslog output</a>
         <a href="#agent">Autonomous agent</a>
+        <a href="#mcp">MCP clients</a>
         <a href="#security">Account security</a>
         {hasRole(user, "admin") && <a href="#admin">Administration</a>}
       </nav>
@@ -54,6 +58,39 @@ export default function Help({ user }: { user: User }) {
             filter.
           </li>
         </ul>
+      </section>
+
+      <section id="library" className="card">
+        <h2>Parser library</h2>
+        <ul>
+          <li>
+            Ready-made filters for the formats most seen in companies: Windows (Security, Sysmon, PowerShell, any EVTX
+            channel, NXLog), web servers and proxies (Apache/Nginx, IIS, Squid, HAProxy), network and security devices
+            (Cisco ASA, FortiGate, Palo Alto, Check Point, Stormshield, CEF, LEEF), Linux (syslog RFC 3164/5424,
+            auth.log, auditd), generic JSON / key=value / CSV, and industrial protocols (Zeek Modbus, DNP3, S7comm, OT
+            alerts in CEF).
+          </li>
+          <li>
+            As soon as source logs are loaded, the format is detected: a banner offers the matching parser. The
+            “Library” button lists every parser, matching ones first, with their filter, sample and produced fields.
+          </li>
+          <li>
+            Every filter maps to ECS field names and works with the pipeline's ECS compatibility on or off. Samples are
+            synthetic: check the result on your own logs and adapt the filter.
+          </li>
+          <li>The AI agent is given the matching parser as a starting point when it recognises your sample.</li>
+        </ul>
+      </section>
+
+      <section id="fields" className="card">
+        <h2>Input fields</h2>
+        <p>
+          Some pipelines rely on what the input adds to each event — typically the source file path, from which a host or
+          an application name is extracted. Declare these fields in the “Input fields” tab of the left panel (e.g.{" "}
+          <code>[log][file][path]</code> = <code>/var/log/apache2/srv-web01/access.log</code>): the test harness sets them
+          on every event before your filters, exactly like the <code>file</code> input. With ECS compatibility disabled,
+          the file input writes <code>path</code> instead. Input fields are saved with the project and given to the agent.
+        </p>
       </section>
 
       <section id="config" className="card">
@@ -172,6 +209,22 @@ export default function Help({ user }: { user: User }) {
         </p>
       </section>
 
+      <section id="mcp" className="card">
+        <h2>MCP clients (Claude Code, Claude Desktop, VS Code…)</h2>
+        <ul>
+          <li>
+            In “Profile &amp; MCP”, generate a dedicated token and copy the ready-made configuration for your client. The
+            assistant acts as you: it only reaches your projects and those shared with you, with your role.
+          </li>
+          <li>
+            A <em>read-only</em> token can list and open projects, run configurations and use the parser library; a{" "}
+            <em>read &amp; write</em> token can also create and save projects and run the agent. Deletion, sharing and
+            administration are never exposed.
+          </li>
+          <li>Every MCP call is recorded in the audit trail; tokens can be revoked at any time.</li>
+        </ul>
+      </section>
+
       <section id="security" className="card">
         <h2>Account security</h2>
         <ul>
@@ -211,17 +264,17 @@ export default function Help({ user }: { user: User }) {
           </ul>
           <h3>SSO (OIDC) and LDAPS</h3>
           <ul>
-            <li>Enabled through environment variables (LSX_OIDC_*, LSX_LDAP_*), secrets through the secret manager.</li>
-            <li>With auto-provisioning disabled, new accounts arrive “pending” and must be approved.</li>
-            <li>Directory groups are mapped to roles in the “Groups → roles” tab.</li>
+            <li>Configured in “Directory &amp; SSO”, with connection tests (OIDC discovery, LDAPS bind and user lookup).</li>
+            <li>With auto-provisioning disabled, new accounts arrive “pending” and are approved from the overview.</li>
+            <li>Directory groups are mapped to roles in “Directory &amp; SSO”.</li>
           </ul>
           <h3>Logs, audit and backups</h3>
           <ul>
             <li>Every critical action (logins, rights, exports, configuration) is recorded with IP and user.</li>
-            <li>Masking of personal data in logs is controlled in “Security & logs”.</li>
+            <li>Masking of personal data in logs is controlled in “Logs &amp; syslog”.</li>
             <li>
               Logs and the audit trail can be forwarded to a remote syslog server (UDP, TCP or TLS with optional client
-              certificate) from “Security & logs”; use “Send a test message” to check the connection.
+              certificate) from “Logs &amp; syslog”; use “Send a test message” to check the connection.
             </li>
             <li>
               An encrypted database backup is produced every night in the <code>backups</code> volume (decryption:{" "}

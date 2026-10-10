@@ -1,0 +1,11 @@
+name = "JSON (one object per line)"
+vendor = "Applications, cloud exports"
+description = """
+Application logs where each line is a JSON object (structured logging, cloud exports…). Fields are decoded at
+the root of the event and the usual timestamp fields (`@timestamp`, `timestamp`, `time`, `ts`) are parsed.
+Use the "JSON lines" input format instead when the whole sample is JSON: no filter is then needed.
+"""
+input_format = "lines"
+priority = -2  # generic: specific parsers win score ties
+detect = ['^\s*\{".+\}\s*$']
+fields = ["level", "service", "msg", "event.original"]

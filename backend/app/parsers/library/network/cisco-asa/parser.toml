@@ -1,0 +1,13 @@
+name = "Cisco ASA / Firepower Threat Defense"
+vendor = "Cisco"
+description = """
+`%ASA-n-nnnnnn` syslog messages. Header (severity, message ID, device) for every message; connection build /
+teardown (302013-302016, with NAT addresses and the correct source / destination for inbound and outbound
+connections), ACL denies (106023, 106100), management logins (605004/605005) and AAA results (113004/113005).
+Teardown messages carry no direction: the initiating side recorded at build time is used as source.
+"""
+input_format = "lines"
+detect = ['%(?:ASA|FTD|FWSM|PIX)-\d-\d{6}: ']
+fields = ["observer.product", "event.code", "log.syslog.severity.code", "source.ip", "source.port",
+          "destination.ip", "destination.port", "network.transport", "network.direction", "source.nat.ip",
+          "rule.name", "event.action", "event.outcome", "user.name", "network.bytes"]

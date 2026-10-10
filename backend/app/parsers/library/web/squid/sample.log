@@ -1,0 +1,4 @@
+1791375332.123    234 10.0.0.5 TCP_MISS/200 5320 GET http://example.org/index.html - HIER_DIRECT/93.184.216.34 text/html
+1791375335.551     12 10.0.0.5 TCP_MEM_HIT/200 1840 GET http://example.org/style.css - HIER_NONE/- text/css
+1791375340.007   1503 10.0.0.8 TCP_TUNNEL/200 45210 CONNECT login.microsoftonline.com:443 alice HIER_DIRECT/20.190.159.2 -
+1791375342.800      0 10.0.0.9 TCP_DENIED/403 3958 GET http://malware.example.net/payload.exe bob HIER_NONE/- text/html

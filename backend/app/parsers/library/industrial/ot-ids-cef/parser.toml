@@ -1,0 +1,12 @@
+name = "OT/ICS security alerts (CEF)"
+input_format = "lines"
+vendor = "Nozomi Networks, Claroty, Dragos, Microsoft Defender for IoT, Armis, TXOne…"
+description = """
+Alerts from OT network detection platforms forwarded as CEF. Same parsing as the generic CEF parser (header,
+extensions, `csN` labels, ECS mapping) plus alert semantics: `event.kind: alert`,
+`event.category: intrusion_detection`, `observer.type: ids` and the rule name / ID from the CEF header.
+"""
+detect = ['CEF:\d+\|(?:Nozomi Networks|Claroty|Dragos|CyberX|Microsoft|Armis|TXOne Networks|Forescout)\|']
+priority = 1
+fields = ["observer.vendor", "observer.product", "rule.name", "rule.id", "event.severity", "event.kind",
+          "source.ip", "destination.ip", "destination.port", "cef.labels"]

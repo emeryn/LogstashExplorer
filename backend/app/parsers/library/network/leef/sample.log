@@ -1,0 +1,3 @@
+LEEF:1.0|Microsoft|MSExchange|2016|15345|src=10.0.0.5	dst=10.0.1.30	dstPort=443	usrName=alice	proto=TCP	sev=3	cat=Mail	devTime=Oct 07 2026 10:15:32
+<13>Oct  7 10:15:40 ids01 LEEF:2.0|Lancope|StealthWatch|7.4|41|^|src=10.0.0.9^dst=203.0.113.50^dstPort=4444^proto=TCP^sev=8^cat=Suspicious Connection^usrName=bob
+LEEF:2.0|Acme|Gateway|3.1|LOGIN_FAIL|x09|src=198.51.100.7	usrName=admin	sev=5	cat=Authentication

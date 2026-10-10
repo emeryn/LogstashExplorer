@@ -1,0 +1,12 @@
+name = "Fortinet FortiGate"
+vendor = "Fortinet"
+description = """
+FortiOS syslog in key=value format (traffic, UTM and event logs). All fields stay under `fortinet.firewall`;
+addresses, ports, interfaces, policy, action, user and byte counters are mapped to ECS. The timestamp combines
+`date`, `time` and `tz`.
+"""
+input_format = "lines"
+detect = ['date=\d{4}-\d{2}-\d{2} time=\d{2}:\d{2}:\d{2} devname="?[^ ]+ devid="?F', 'logid="?\d{10}"? type="?\w+"? subtype=']
+fields = ["observer.name", "observer.serial_number", "event.code", "source.ip", "source.port", "destination.ip",
+          "destination.port", "observer.ingress.interface.name", "rule.id", "rule.name", "event.action", "event.type",
+          "source.bytes", "destination.bytes", "user.name", "fortinet.firewall"]

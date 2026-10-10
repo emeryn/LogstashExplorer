@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
 from app import __version__
-from app.api import admin, auth, mcp, me, projects, workspace
+from app.api import admin, admin_directory, admin_overview, auth, mcp, me, parsers, projects, workspace
 from app.core import syslog
 from app.core.config import get_settings
 from app.core.crypto import HybridCipher, init_cipher
@@ -16,6 +16,7 @@ from app.core.secrets import require_secret
 from app.core.security import is_public_origin
 from app.db.init import init_db
 from app.db.session import get_engine, init_engine, sessionmaker
+from app.services.directory import seed_from_environment
 from app.services.settings_store import apply_logging_settings, apply_syslog_settings
 from app.tasks.scheduler import start_scheduler
 
@@ -37,6 +38,7 @@ async def lifespan(_: FastAPI):
     async with sessionmaker()() as db:
         await apply_logging_settings(db)
         await apply_syslog_settings(db)
+        await seed_from_environment(db)
     scheduler = start_scheduler()
     log.info("backend started", extra={"ctx": {"version": __version__, "env": s.env}})
     yield
@@ -102,5 +104,8 @@ app.include_router(auth.router)
 app.include_router(me.router)
 app.include_router(workspace.router)
 app.include_router(projects.router)
+app.include_router(parsers.router)
 app.include_router(admin.router)
+app.include_router(admin_directory.router)
+app.include_router(admin_overview.router)
 app.include_router(mcp.router)

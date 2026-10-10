@@ -1,0 +1,3 @@
+{"time":"2026-10-07T10:15:32.120Z","level":"info","service":"checkout","msg":"order created","order_id":18273,"amount":49.9}
+{"time":"2026-10-07T10:15:33.410Z","level":"error","service":"checkout","msg":"payment declined","order_id":18274,"error":{"code":"card_declined"}}
+{"ts":1791375340.5,"level":"warn","service":"auth","msg":"too many attempts","user":"bob"}

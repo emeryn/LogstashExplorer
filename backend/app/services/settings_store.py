@@ -13,6 +13,23 @@ from app.db.models import AppSetting, SecretSetting
 DEFAULTS: dict[str, dict[str, Any]] = {
     "logging": {"masking_enabled": True, "level": "INFO"},
     "provisioning": {"auto_provisioning": False, "default_role": "user"},
+    "oidc": {
+        "enabled": False,
+        "issuer": "",
+        "client_id": "",
+        "scopes": "openid profile email",
+        "groups_claim": "groups",
+        "display_name": "SSO",
+    },
+    "ldap": {
+        "enabled": False,
+        "url": "",
+        "bind_dn": "",
+        "user_base": "",
+        "user_filter": "(&(objectClass=person)(sAMAccountName={username}))",
+        "group_attribute": "memberOf",
+    },
+    "mcp": {"enabled": True},
     "syslog": {
         "enabled": False,
         "host": "",

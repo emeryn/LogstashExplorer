@@ -1,0 +1,13 @@
+name = "Windows event log, any channel (EVTX)"
+vendor = "Microsoft"
+description = """
+Any channel converted from `.evtx` (System, Application, Directory Service, custom channels…): normalises the
+System block into `event.code`, `event.provider`, `host.name`, `log.level` and `winlog.*`, and keeps the event
+payload under `winlog.event_data` (unnamed data items stay in `winlog.event_data.Data.#text`). Start from it
+to write channel-specific mappings.
+"""
+input_format = "json"
+detect = ['"System"\s*:\s*\{\s*"Provider"\s*:', '"Event"\s*:\s*\{\s*"#attributes"']
+priority = -1
+fields = ["event.code", "event.provider", "host.name", "log.level", "winlog.channel", "winlog.record_id",
+          "winlog.event_data"]
