@@ -33,17 +33,17 @@ No `.env` file is needed: secrets are generated at first start in dedicated volu
 
 ### Docker
 ```bash
-git clone <repo> logstash-explorer && cd logstash-explorer
-docker compose up -d --build
+git clone https://github.com/emeryn/LogstashExplorer logstash-explorer && cd logstash-explorer
+docker compose up -d (or docker compose up -d --build)
 docker compose exec backend cat /run/lsx-secrets/app/admin_initial_password
 # → http://localhost:8080 , "admin" account (password change enforced at first login)
 ```
 
 ### Podman (rootless)
 ```bash
-git clone <repo> logstash-explorer && cd logstash-explorer
-systemctl --user enable --now podman.socket          # Docker-compatible API, rootless
-podman compose up -d --build                          # (podman-compose or docker-compose through the socket)
+git clone  https://github.com/emeryn/LogstashExplorer logstash-explorer && cd logstash-explorer
+systemctl --user enable --now podman.socket        
+podman compose up -d                       
 podman compose exec backend cat /run/lsx-secrets/app/admin_initial_password
 ```
 In rootless mode, the containers' UID 1000 is remapped to a subuid range of the host user

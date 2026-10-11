@@ -16,7 +16,7 @@ services:
   # One-shot: generates secrets (idempotent), no network at all.
   secrets-init:
     build: ./backend
-    image: docker.io/emeryn/logstash-explorer/backend:0.1.0
+    image: docker.io/emeryn/lex-backend:latest
     command: ["python", "-m", "app.cli", "gen-secrets"]
     user: "1000:1000"
     read_only: true
@@ -67,7 +67,7 @@ services:
   # Sandboxed Logstash executor: internal network only (no egress), no access to DB or app secrets.
   runner:
     build: ./runner
-    image: docker.io/emeryn/logstash-explorer/runner:0.1.0
+    image: docker.io/emeryn/lex-runner:latest
     <<: *hardening
     user: "1000:1000"
     environment:
@@ -85,7 +85,7 @@ services:
 
   backend:
     build: ./backend
-    image: docker.io/emeryn/logstash-explorer/backend:0.1.0
+    image: docker.io/emeryn/lex-backend:latest
     <<: *hardening
     user: "1000:1000"
     environment:
@@ -119,7 +119,7 @@ services:
 
   frontend:
     build: ./frontend
-    image: docker.io/emeryn/logstash-explorer/frontend:0.1.0
+    image: docker.io/emeryn/lex-frontend:latest
     <<: *hardening
     user: "101:101"
     tmpfs:
