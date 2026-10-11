@@ -3,8 +3,7 @@
 Secure web application to **test, parse and automatically fix Logstash configurations**.
 Load raw logs, edit `logstash.conf` and see the **actual** Logstash output. An autonomous AI agent
 (local Ollama or OpenAI) can also write the configuration, run it, read the errors and fix it in a loop
-until it validates. A library of **88 ready-made parsers** (Windows EVTX, cloud and SaaS audit logs, web
-servers, firewalls, IDS, Linux and legacy Unix, databases, industrial protocols) detects the format of your logs and gives you a working filter to start from.
+until it validates. A library of **88 ready-made parsers** detects the format of your logs and gives you a working filter to start from.
 
 ![Workspace](docs/screenshots/workspace.png)
 
@@ -28,7 +27,7 @@ servers, firewalls, IDS, Linux and legacy Unix, databases, industrial protocols)
 
 ---
 
-## 1. Quick start (≤ 5 commands)
+## 1. Quick start 
 
 No `.env` file is needed: secrets are generated at first start in dedicated volumes.
 
@@ -39,8 +38,6 @@ docker compose up -d --build
 docker compose exec backend cat /run/lsx-secrets/app/admin_initial_password
 # → http://localhost:8080 , "admin" account (password change enforced at first login)
 ```
-> Port 8080 already in use? `echo LSX_HTTP_PORT=8088 > .env` before `up` (the public URL follows automatically).
-> In Git Bash (Windows), prefix the `exec` command with `MSYS_NO_PATHCONV=1`.
 
 ### Podman (rootless)
 ```bash
@@ -51,18 +48,6 @@ podman compose exec backend cat /run/lsx-secrets/app/admin_initial_password
 ```
 In rootless mode, the containers' UID 1000 is remapped to a subuid range of the host user
 (`/etc/subuid`): even a container escape does not lead to root on the host.
-
-### Kubernetes (kubectl)
-Images must first be pushed to your registry: adapt `images:` in `deploy/k8s/kustomization.yaml`.
-```bash
-kubectl apply -f deploy/k8s/namespace.yaml
-./deploy/k8s/gen-secrets.sh | kubectl apply -f -
-kubectl apply -k deploy/k8s
-kubectl -n logstash-explorer get secret lsx-app -o jsonpath='{.data.admin_initial_password}' | base64 -d
-```
-The namespace enforces the **`restricted` Pod Security Standard** (non-root, `allowPrivilegeEscalation: false`,
-capabilities `drop: ALL`, seccomp `RuntimeDefault`, read-only rootfs). **Default-deny** NetworkPolicies
-only open the flows shown in the diagram. Expose the `frontend` service through your own TLS ingress (see §6).
 
 ---
 
@@ -162,12 +147,6 @@ flowchart LR
   stdin input after strict validation; they are saved (encrypted) with the project and passed to the agent.
 - **Native EVTX**: Windows `.evtx` logs are converted to JSON lines with the Rust `evtx` parser (Python
   binding of `evtx_dump` / evtx2json) as soon as they are uploaded in the left panel.
-- **auditd pre-processing with LAUREL**: when the input holds raw `audit.log` records, **Convert with LAUREL**
-  runs [LAUREL](https://github.com/threathunters-io/laurel) 0.8.2 (bundled in the backend image, pinned and
-  checksum-verified) on them: the records of each event (SYSCALL, EXECVE, CWD, PATH, PROCTITLE…) become one
-  JSON line with hex strings decoded, ready for the "Linux auditd via LAUREL" parser. Host-dependent
-  enrichments are disabled since the file comes from another machine; see
-  [auditd with LAUREL in production](#auditd-with-laurel-in-production) for the real setup.
 - **AI agent**: Ollama and OpenAI (or any OpenAI-compatible endpoint). Endpoints, models, keys and
   headers/variables are configured from the administration and encrypted at rest.
   **Model discovery**: the drop-down list is filled by querying the server (`/api/tags` for Ollama with
@@ -571,10 +550,7 @@ pre-commit install
 - Each run starts a Logstash JVM (~8 s). A possible optimization: a pool of warm Logstash pipelines with
   hot reload.
 - The schema is created at startup (`create_all`); add Alembic before the first production migration.
-- OpenSCAP: re-run the evaluation with Debian 13 SSG content as soon as it is published.
 - The per-user run limit is kept in memory per backend process: with several backend replicas, it applies
   per replica (use a PostgreSQL/Redis counter if needed).
 - Group membership is refreshed at login: a group removal in the directory takes effect at the user's next
   login (at most 8 h, the absolute session duration).
-- Parser library samples are synthetic, written from vendor documentation: vendor formats vary between
-  versions and settings (e.g. PAN-OS columns, FortiOS fields), so check each filter on your own logs.
