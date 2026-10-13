@@ -1,4 +1,4 @@
-# Logstash Explorer (LEX) — Logstash filter constructor
+# Logstash Explorer (LEX) 
 
 Secure web application to **test, parse and automatically fix Logstash configurations**.
 Load raw logs, edit `logstash.conf` and see the **actual** Logstash output. An autonomous AI agent
