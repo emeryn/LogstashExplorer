@@ -131,7 +131,7 @@ flowchart LR
   | Cloud & SaaS | AWS CloudTrail, VPC Flow Logs, ALB, GuardDuty; Google Cloud Audit Logs; Azure Activity, Entra ID sign-ins; Microsoft 365 unified audit; Okta; Cloudflare; Kubernetes audit |
   | Web & proxy | Apache / Nginx access, Apache error, Nginx error, IIS W3C, Squid, HAProxy, Traefik, Envoy / Istio |
   | Network & security | Cisco ASA / FTD, Cisco IOS / NX-OS, Meraki, FortiGate, Palo Alto PAN-OS, Check Point, Stormshield, Juniper SRX, Sophos XG, SonicWall, pfSense / OPNsense, iptables / UFW, F5 ASM, Suricata EVE, Snort, OpenVPN, CEF, LEEF, Zeek conn / dns / http / ssl |
-  | Systems & generic | Syslog RFC 3164 / 5424, Linux auth, auditd (raw and pre-processed by LAUREL), journald, Postfix, BIND, ISC DHCP, vsftpd, Fail2ban, Wazuh / OSSEC alerts, osquery, VMware ESXi, **Solaris** syslog and BSM audit, **AIX** syslog, Unix `sulog` (Solaris / AIX / HP-UX), `last` / wtmp, JSON lines, key=value, CSV |
+  | Systems & generic | Syslog RFC 3164 / 5424, Linux auth, auditd, journald, Postfix, BIND, ISC DHCP, vsftpd, Fail2ban, Wazuh / OSSEC alerts, osquery, VMware ESXi, **Solaris** syslog and BSM audit, **AIX** syslog, Unix `sulog` (Solaris / AIX / HP-UX), `last` / wtmp, JSON lines, key=value, CSV |
   | Apps & databases | Docker json-file, Kubernetes CRI (pod / namespace from the file path), Java log4j / logback, Spring Boot, PostgreSQL, MySQL, SQL Server, MongoDB, Redis, Kafka |
   | Industrial (OT/ICS) | Zeek Modbus, DNP3, S7comm, EtherNet/IP CIP, BACnet (CISA ICSNPP), OT security alerts in CEF (Nozomi, Claroty, Dragos…) |
 
@@ -156,7 +156,7 @@ flowchart LR
 - **Authentication**: local Argon2id accounts with anti-timing and lockout, TOTP (replay protection),
   WebAuthn/passkeys, OIDC (code + PKCE + state + nonce, no open redirect), LDAPS (TLS mandatory),
   service accounts and revocable API tokens, **read-only or read & write** (a read-only token can only
-  call GET routes and the side-effect-free POSTs: run, EVTX and LAUREL conversions, format detection, MCP).
+  call GET routes and the side-effect-free POSTs: run, EVTX conversions, format detection, MCP).
 - **Directory & SSO in the admin**: OIDC (issuer, client, scopes, groups claim, button label) and LDAPS
   (URL, bind DN, search base, filter, group attribute) are configured in **Administration → Directory &
   SSO**, with the client secret and bind password encrypted at rest, the redirect URI to register, and
@@ -389,100 +389,6 @@ All variables are optional (`LSX_` prefix, see `.env.example` and `backend/app/c
   the admin) in Vault (KV v2), then provide the token through a Vault Agent sidecar.
 - **Restoring a backup**: `docker compose exec backend python -m app.cli decrypt-backup /backups/<f>.dump.enc /tmp/db.dump` then `pg_restore`.
 
-### auditd with LAUREL in production
-
-[LAUREL](https://github.com/threathunters-io/laurel) is an auditd plugin: auditd hands it every record, it
-groups the records of each event into one JSON line, decodes hex strings and adds context read on the host
-(parent process, process labels, user names, containers). The workspace reproduces only the grouping and
-decoding, because an uploaded file comes from another machine: in production LAUREL runs **on each audited
-host**.
-
-1. **Install the binary** (each host). Prefer the glibc build when users come from LDAP / SSSD (the static
-   musl build only reads `/etc/passwd` and `/etc/group`):
-   ```sh
-   curl -LO https://github.com/threathunters-io/laurel/releases/download/v0.8.2/laurel-0.8.2-x86_64-glibc.tar.gz
-   echo "c9b495acf67e9941760b24308145b513b2ee2a0a5bfe0a5bd70d5133c27c6e6c  laurel-0.8.2-x86_64-glibc.tar.gz" | sha256sum -c -
-   tar xzf laurel-0.8.2-x86_64-glibc.tar.gz
-   sudo install -m 0755 laurel-0.8.2-x86_64-glibc/bin/laurel /usr/local/sbin/laurel
-   sudo useradd --system --home-dir /var/log/laurel --create-home _laurel
-   ```
-2. **Configure LAUREL**: `/etc/laurel/config.toml` (root-owned, not world-writable, or LAUREL refuses it).
-   The settings below match what the library parser expects:
-   ```toml
-   directory = "/var/log/laurel"
-   user = "_laurel"
-   input = "stdin"
-
-   [auditlog]
-   file = "audit.log"
-   size = 50000000
-   generations = 5
-   read-users = ["logstash"]        # or the account of Filebeat / Elastic Agent / rsyslog
-
-   [state]
-   file = "state"                    # keeps the process table across restarts
-
-   [transform]
-   execve-argv = ["array", "string"] # ARGV for analysis, ARGV_STR for process.command_line
-
-   [translate]
-   universal = true                  # syscall / arch names, decoded SOCKADDR (destination.ip/port)
-   user-db = true                    # UID="root", AUID="alice" → user.name, user.audit.name
-
-   [enrich]
-   pid = true                        # PID.EVENT_ID → process.entity_id
-   spawned-by = true                 # SPAWNED_BY → process.parent.*
-   execve-env = ["LD_PRELOAD", "LD_LIBRARY_PATH"]
-   container = true
-   systemd = true
-   script = true
-
-   [label-process]
-   label-keys = ["software_mgmt"]    # labels become tags
-   propagate-labels = ["software_mgmt"]
-   ```
-3. **Register the plugin** in `/etc/audit/plugins.d/laurel.conf` (`/etc/audisp/plugins.d/` with auditd 2),
-   then reload auditd and check that `laurel` runs in the `auditd.service` cgroup:
-   ```ini
-   active = yes
-   direction = out
-   type = always
-   format = string
-   path = /usr/local/sbin/laurel
-   args = --config /etc/laurel/config.toml
-   ```
-   ```sh
-   sudo pkill -HUP auditd && systemctl status auditd.service
-   tail -n 2 /var/log/laurel/audit.log
-   ```
-   With SELinux enforcing, build and load the policy shipped in LAUREL's `contrib/selinux` first. Keep
-   `log_format = RAW` in `auditd.conf` and let LAUREL translate (`[translate]` above). auditd can keep writing
-   `/var/log/audit/audit.log` as the forensic copy.
-4. **Audit rules**: LAUREL can only track processes whose `execve` calls are audited. Start from
-   `laurel-audit-rules(7)` (in the release archive): `execve` / `execveat` for all users, then watches with
-   keys (`-w /etc/shadow -p wa -k shadow`, `-w /usr/sbin/useradd -p x -k identity`…). Keys become
-   `auditd.key`, and process labels become `tags`.
-5. **Ship `/var/log/laurel/audit.log*`** as plain lines (LAUREL rotates the file itself, so do not add
-   logrotate). For instance with a Logstash file input. Do **not** use a `json` codec: the filter decodes the
-   line itself so that LAUREL's upper-case keys stay under `auditd.laurel`:
-   ```
-   input {
-     file {
-       path => ["/var/log/laurel/audit.log"]
-       mode => "tail"
-       codec => plain { charset => "UTF-8" }
-     }
-   }
-   filter {
-     # paste backend/app/parsers/library/system/auditd-laurel/filter.conf here
-   }
-   ```
-   With Filebeat or Elastic Agent, use a `filestream` input without JSON parsing and send to Logstash.
-   rsyslog's `imfile` works too (`@cee:` prefix with `line-prefix` if you use `mmjsonparse`).
-6. **Backfill archived raw logs** (`audit.log.1`…) on an analysis machine: run LAUREL on stdin with
-   `[auditlog] file = "-"`, `[state] file = ""` and the `[enrich]` options set to `false` (as the workspace
-   does, since the original host's processes and users are not available), then ship the JSON lines:
-   `laurel --config offline.toml < audit.log.1 | grep '^{' > audit.1.jsonl`.
 ### TLS reverse proxy (Nginx)
 
 The stack only listens on `127.0.0.1:${LSX_HTTP_PORT}`: put a TLS reverse proxy in front of it. Example for an
